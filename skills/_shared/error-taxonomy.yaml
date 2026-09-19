@@ -1,0 +1,182 @@
+# Controlled vocabulary for grammar error tags (spec §5.6).
+#
+# SINGLE SOURCE OF TRUTH. Two consumers read this file:
+#   - app/schemas/taxonomy.py  builds closed StrEnums at import time
+#   - app/skills/loader.py     renders it into the prompt
+# Editing it changes both, so they cannot drift.
+#
+# Why closed: free-text categories make the metrics tab useless because nothing
+# aggregates. The prompt asks the model to stay inside this list; the Pydantic
+# enum makes an out-of-vocabulary value structurally impossible.
+#
+# Extending: add a subcategory here and both the enum and the prompt pick it up.
+# Doing so changes every dependent prompt_hash, so evals will re-run — that is
+# the intended behaviour, not a problem.
+
+version: 1
+
+categories:
+  morphology:
+    label: Morphology
+    description: Word formation — how the root is inflected or derived.
+    subcategories:
+      verb_conjugation:
+        label: Verb conjugation
+        description: Wrong person, number, gender, tense, or mood on a verb.
+        example: "الطلاب يذهب إلى المدرسة → الطلاب يذهبون (plural subject needs plural verb)"
+      verb_form:
+        label: Verb form (I–X)
+        description: Wrong derived form, changing the verb's meaning or transitivity.
+        example: "علّمت الكتاب → تعلّمت الكتاب (form II 'taught' vs form V 'learned')"
+      derived_noun:
+        label: Derived noun
+        description: Malformed active/passive participle, verbal noun, or noun of place.
+        example: "مَكتوب المدرسة → مَكتَب المدرسة"
+      broken_plural:
+        label: Broken plural
+        description: Wrong or invented internal plural pattern.
+        example: "كتابات (for كتاب) → كُتُب"
+      dual:
+        label: Dual
+        description: Missing or malformed dual, or a dual where the plural is required.
+        example: "الولدين ذهبوا → الولدان ذهبا"
+
+  syntax:
+    label: Syntax
+    description: Sentence structure and the relations between words.
+    subcategories:
+      idafa:
+        label: Iḍāfa construction
+        description: Possessive construct errors — article on the first term, wrong case on the second.
+        example: "الكتابُ الولدِ → كتابُ الولدِ (first term takes no article)"
+      adjective_agreement:
+        label: Adjective agreement
+        description: Adjective not matching its noun in gender, number, case, or definiteness.
+        example: "المدينة الكبير → المدينة الكبيرة"
+      word_order:
+        label: Word order
+        description: Constituents in an order MSA does not allow.
+        example: "الولد ذهب إلى المدرسة أمس بسرعة → ذهب الولد بسرعة إلى المدرسة أمس"
+      particle_usage:
+        label: Particle usage
+        description: Wrong or missing preposition or particle, including verb-preposition pairing.
+        example: "بحثت على الكتاب → بحثت عن الكتاب"
+      negation:
+        label: Negation
+        description: Wrong negation particle for the tense or mood.
+        example: "لم أذهب أمس ✓ / لا أذهب أمس ✗ (لا cannot negate the past)"
+      conditional:
+        label: Conditional structure
+        description: Malformed conditional — wrong particle or wrong verb mood in either clause.
+        example: "إذا تدرس، تنجح → إن تدرسْ تنجحْ (jussive after إن)"
+
+  case_marking:
+    label: Case marking (iʿrāb)
+    description: Nominative, accusative, and genitive marking.
+    subcategories:
+      nominative:
+        label: Nominative (رفع)
+        description: A word requiring rafʿ marked otherwise.
+        example: "إنّ الولدُ مجتهد → إنّ الولدَ مجتهدٌ"
+      accusative:
+        label: Accusative (نصب)
+        description: A word requiring naṣb marked otherwise — objects, adverbials, after إنّ.
+        example: "رأيت الولدُ → رأيت الولدَ"
+      genitive:
+        label: Genitive (جر)
+        description: A word requiring jarr marked otherwise — after a preposition or as iḍāfa's second term.
+        example: "ذهبت إلى المدرسةُ → ذهبت إلى المدرسةِ"
+
+  agreement:
+    label: Agreement
+    description: Feature mismatch between words that must agree.
+    subcategories:
+      gender:
+        label: Gender
+        description: Masculine/feminine mismatch, including non-human plural agreement.
+        example: "الكتب جميلون → الكتب جميلة (non-human plurals take feminine singular)"
+      number:
+        label: Number
+        description: Singular/dual/plural mismatch.
+        example: "ثلاثة كتاب → ثلاثة كتب"
+      definiteness:
+        label: Definiteness
+        description: Definite/indefinite mismatch between noun and adjective.
+        example: "الكتاب جديد (as a phrase) → الكتاب الجديد"
+
+  lexis:
+    label: Lexis
+    description: Word choice, independent of grammatical form.
+    subcategories:
+      wrong_word:
+        label: Wrong word choice
+        description: A real word that does not mean what the learner intended.
+        example: "أكلت الماء → شربت الماء"
+      register_mismatch:
+        label: Register mismatch
+        description: Colloquial or dialectal usage where MSA is required.
+        example: "إيه الأخبار؟ → ما الأخبار؟"
+      calque:
+        label: Calque from English
+        description: An English idiom translated word-for-word into Arabic.
+        example: "أخذ حماماً → استحمّ"
+
+  orthography:
+    label: Orthography
+    description: Spelling and letter forms. Usually minor unless meaning changes.
+    subcategories:
+      hamza:
+        label: Hamza placement
+        description: Wrong hamza seat, or a missing/spurious hamza.
+        example: "سئل → سأل"
+      ta_marbuta:
+        label: Tāʾ marbūṭa vs hāʾ
+        description: ة written as ه or the reverse.
+        example: "مدرسه → مدرسة"
+      alif_maqsura:
+        label: Alif maqṣūra vs yāʾ
+        description: ى written as ي or the reverse.
+        example: "علي الطاولة → على الطاولة"
+      diacritics:
+        label: Diacritics
+        description: Harakat that are present but wrong, changing the reading.
+        example: "كَتُب → كُتُب"
+      spelling:
+        label: General spelling
+        description: Letter omission, insertion, or transposition not covered above.
+        example: "مدرصة → مدرسة"
+
+  discourse:
+    label: Discourse
+    description: Organisation above the sentence. Mostly relevant to essays.
+    subcategories:
+      cohesion:
+        label: Cohesion
+        description: Missing or unclear reference between sentences.
+        example: "An unbound pronoun with no identifiable antecedent."
+      connectives:
+        label: Connectives
+        description: Missing, wrong, or overused connective particles.
+        example: "Every sentence beginning with و where a contrastive لكن is needed."
+      paragraph_structure:
+        label: Paragraph structure
+        description: No discernible progression of ideas.
+        example: "A single run-on paragraph presenting three unrelated arguments."
+
+# Severity guidance, rendered into the prompt so the model applies it
+# consistently. The scoring code treats these very differently: minor errors
+# carry NO score penalty, because a learner who conveyed the meaning has
+# comprehended. See app/grading/score.py.
+severities:
+  minor:
+    description: >-
+      Meaning is completely clear. A native reader would notice but not
+      misunderstand. Most orthography belongs here.
+  moderate:
+    description: >-
+      Meaning survives but the reader must work, or the sentence is noticeably
+      non-native. Most agreement and case errors belong here.
+  blocking:
+    description: >-
+      Meaning is lost, ambiguous, or reversed. A reader cannot reliably recover
+      what was intended.
