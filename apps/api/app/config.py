@@ -34,7 +34,14 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
+    # Legacy HS256 signing secret. Only needed while a project still has
+    # pre-migration tokens in flight; ES256 tokens verify via JWKS instead.
+    supabase_jwt_secret: str = ""
     database_url: str = ""
+
+    # Supabase Storage bucket holding uploaded PDFs.
+    storage_bucket: str = "resources"
+    max_upload_mb: int = 50
 
     # Must stay False in production: a mid-request skill change breaks the cached
     # prefix and produces two different results under one recorded prompt_hash.

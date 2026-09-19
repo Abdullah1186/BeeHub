@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 
 import structlog
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import resources
+from app.auth import AuthenticatedUser, current_user
 from app.config import get_settings
 
 settings = get_settings()
@@ -31,7 +33,16 @@ app.add_middleware(
 )
 
 
+app.include_router(resources.router)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Liveness probe. Deliberately touches nothing external."""
     return {"status": "ok", "environment": settings.environment}
+
+
+@app.get("/me")
+def me(user: AuthenticatedUser = Depends(current_user)) -> dict[str, str | None]:
+    """Round-trips the caller's JWT. Proves auth is wired end to end."""
+    return {"id": user.id, "email": user.email}
