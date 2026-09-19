@@ -142,6 +142,19 @@ def process_job(client, job: dict) -> None:
         client.table("resource_chunks").insert(rows[start : start + 200]).execute()
 
     bound.info("chunks_stored", count=len(rows))
+
+    # Embed only after the gate passed — there is no point spending on vectors
+    # for text the gate rejected. A failure here leaves the chunks in place with
+    # a null embedding: the resource is still usable for generation (which does
+    # not use vector search) and embedding can be retried.
+    try:
+        from app.retrieval.selector import embed_pending_chunks
+
+        embedded = embed_pending_chunks(client, resource_id)
+        bound.info("chunks_embedded", count=embedded)
+    except Exception as exc:  # noqa: BLE001
+        bound.error("embedding_failed", error=str(exc))
+
     client.table("ingest_jobs").update({"status": "done"}).eq("id", job["id"]).execute()
 
 
