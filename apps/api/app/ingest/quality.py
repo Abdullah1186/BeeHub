@@ -49,6 +49,18 @@ MAX_REVERSED_RATIO = 0.40        # above -> visual-order (word order mirrored)
 MAX_MIRRORED_RATIO = 0.50        # above -> character-level mirroring
 MIN_CHARS_PER_PAGE = 40          # below -> effectively no text layer
 
+# Intra-word fragmentation. Calibrated against a real bilingual poetry PDF that
+# measured 11% single-letter tokens and 0.16 orphaned diacritics per token while
+# passing every other check. Clean Arabic prose sits near 2-4% / ~0.0.
+#
+# `degraded` rather than `failed`: the text is still broadly readable and the
+# learner may want to keep the resource, but generated practice will quote
+# broken words, so they must be told.
+DEGRADED_FRAGMENTATION_RATIO = 0.08
+FAILED_FRAGMENTATION_RATIO = 0.20
+DEGRADED_ORPHAN_HARAKAT_RATIO = 0.05
+FAILED_ORPHAN_HARAKAT_RATIO = 0.30
+
 # Words that begin an Arabic phrase. Under correct logical-order extraction they
 # appear at the START of a line far more often than at the end. If they keep
 # landing at the end, the extractor emitted the line mirrored.
@@ -86,6 +98,54 @@ def _forward_score(words: list[str]) -> int:
     return score
 
 
+# --- Intra-word fragmentation --------------------------------------------
+# A subtler failure than mirroring: the glyphs and their order are right, but
+# spaces are inserted INSIDE words and diacritics are detached from the letters
+# they belong to. "فَقُلْتُ" arrives as "فَق لْت", and "نعمة" as "ن عْمَة".
+#
+# Every earlier check passes on such text — the letters are Arabic, the order is
+# logical, word length looks normal — so it reads as clean while actually being
+# a bag of fragments. Questions generated from it would quote words that do not
+# exist, which is the §5.2 failure mode wearing a different hat.
+#
+# Two independent signals, because either alone has false positives: Arabic has
+# genuine one-letter words (و، ل، ب as proclitics), and a leading harakat can
+# legitimately appear after a line break in poetry.
+
+_HARAKAT_CLASS = "ً-ْٰ"
+_ORPHAN_HARAKAT = re.compile(f"(?:^|\\s)[{_HARAKAT_CLASS}]")
+_ARABIC_LETTER = re.compile("[ؠ-ي]")
+
+
+def _strip_harakat(text: str) -> str:
+    return re.sub(f"[{_HARAKAT_CLASS}]", "", text)
+
+
+def fragmentation_ratio(text: str) -> float:
+    """Share of Arabic tokens that are a single letter once harakat are removed.
+
+    Real Arabic prose runs about 2-4%; anything approaching 10% means spaces were
+    inserted inside words.
+    """
+    tokens = [t for t in text.split() if _ARABIC_LETTER.search(t)]
+    if len(tokens) < 20:
+        return 0.0
+    singles = sum(1 for t in tokens if len(_strip_harakat(t)) == 1)
+    return singles / len(tokens)
+
+
+def orphan_diacritic_ratio(text: str) -> float:
+    """Diacritics that follow whitespace instead of a letter, per Arabic token.
+
+    A harakat is a combining mark; it cannot begin a word. Finding them adrift
+    means the extractor separated them from their base letter.
+    """
+    tokens = [t for t in text.split() if _ARABIC_LETTER.search(t)]
+    if len(tokens) < 20:
+        return 0.0
+    return len(_ORPHAN_HARAKAT.findall(text)) / len(tokens)
+
+
 def mirrored_text_ratio(text: str) -> float:
     """How much more 'Arabic-shaped' the text is when reversed.
 
@@ -117,6 +177,8 @@ class PageQuality:
     mean_token_length: float
     reversed_ratio: float
     mirrored_ratio: float = 0.0
+    fragmentation_ratio: float = 0.0
+    orphan_harakat_ratio: float = 0.0
 
     @property
     def is_empty(self) -> bool:
@@ -136,6 +198,8 @@ class QualityReport:
     mean_token_length: float = 0.0
     mean_reversed_ratio: float = 0.0
     mean_mirrored_ratio: float = 0.0
+    mean_fragmentation_ratio: float = 0.0
+    mean_orphan_harakat_ratio: float = 0.0
     needs_ocr: bool = False
 
     def to_dict(self) -> dict:
@@ -149,6 +213,8 @@ class QualityReport:
             "mean_token_length": round(self.mean_token_length, 2),
             "mean_reversed_ratio": round(self.mean_reversed_ratio, 4),
             "mean_mirrored_ratio": round(self.mean_mirrored_ratio, 4),
+            "mean_fragmentation_ratio": round(self.mean_fragmentation_ratio, 4),
+            "mean_orphan_harakat_ratio": round(self.mean_orphan_harakat_ratio, 4),
             "needs_ocr": self.needs_ocr,
         }
 
@@ -192,6 +258,8 @@ def assess_page(page_number: int, text: str) -> PageQuality:
         mean_token_length=mean_token_length(text),
         reversed_ratio=reversed_order_ratio(text),
         mirrored_ratio=mirrored_text_ratio(text),
+        fragmentation_ratio=fragmentation_ratio(text),
+        orphan_harakat_ratio=orphan_diacritic_ratio(text),
     )
 
 
@@ -229,6 +297,8 @@ def assess_document(pages: list[PageQuality]) -> QualityReport:
     report.mean_token_length = sum(p.mean_token_length for p in non_empty) / n
     report.mean_reversed_ratio = sum(p.reversed_ratio for p in non_empty) / n
     report.mean_mirrored_ratio = sum(p.mirrored_ratio for p in non_empty) / n
+    report.mean_fragmentation_ratio = sum(p.fragmentation_ratio for p in non_empty) / n
+    report.mean_orphan_harakat_ratio = sum(p.orphan_harakat_ratio for p in non_empty) / n
 
     fatal: list[str] = []
     warnings: list[str] = []
@@ -262,6 +332,31 @@ def assess_document(pages: list[PageQuality]) -> QualityReport:
         fatal.append(
             f"the text reads {report.mean_mirrored_ratio:.0%} more like Arabic when "
             "reversed — the extractor emitted mirrored (visual-order) character runs"
+        )
+
+    # Intra-word fragmentation. Severe cases are unusable; milder ones are
+    # readable but will make generated practice quote broken words, so the
+    # learner is warned rather than silently served bad questions.
+    if report.mean_fragmentation_ratio > FAILED_FRAGMENTATION_RATIO:
+        fatal.append(
+            f"{report.mean_fragmentation_ratio:.0%} of Arabic words extracted as single "
+            "letters — word spacing inside words is badly broken"
+        )
+    elif report.mean_fragmentation_ratio > DEGRADED_FRAGMENTATION_RATIO:
+        warnings.append(
+            f"{report.mean_fragmentation_ratio:.0%} of Arabic words extracted as single "
+            "letters — some words are split mid-word, so questions may quote them oddly"
+        )
+
+    if report.mean_orphan_harakat_ratio > FAILED_ORPHAN_HARAKAT_RATIO:
+        fatal.append(
+            f"{report.mean_orphan_harakat_ratio:.2f} detached diacritics per word — "
+            "harakat were separated from their letters"
+        )
+    elif report.mean_orphan_harakat_ratio > DEGRADED_ORPHAN_HARAKAT_RATIO:
+        warnings.append(
+            f"{report.mean_orphan_harakat_ratio:.2f} detached diacritics per word — "
+            "some vowel marks lost their letter during extraction"
         )
 
     # Partial damage: enough pages are empty that coverage is unreliable.

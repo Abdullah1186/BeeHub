@@ -11,7 +11,9 @@ from app.ingest.quality import (
     IngestStatus,
     assess_document,
     assess_page,
+    fragmentation_ratio,
     mirrored_text_ratio,
+    orphan_diacritic_ratio,
     reversed_order_ratio,
 )
 
@@ -121,6 +123,59 @@ def test_mirrored_ratio_ignores_tiny_samples():
 
 def test_mirrored_ratio_handles_latin():
     assert mirrored_text_ratio("the quick brown fox jumps over a lazy dog") == 0.0
+
+
+# --- Intra-word fragmentation -------------------------------------------
+# Found by running a real Arabic poetry PDF through the gate. The glyphs and
+# their order were correct, so every existing check passed and the verdict was
+# "extraction looks clean" — while 11% of Arabic tokens were single letters and
+# words like فقلت / نعمة / تزورها had been split mid-word by stray spaces.
+
+
+def test_clean_prose_is_not_fragmented():
+    text = normalize_for_display(GOOD_PAGE)
+    assert fragmentation_ratio(text) < 0.08
+    assert orphan_diacritic_ratio(text) < 0.05
+
+
+def test_heavily_vocalised_text_is_not_flagged():
+    """Guard against penalising correctly-attached diacritics."""
+    vocalised = normalize_for_display(GOOD_PAGE)  # GOOD_PAGE is fully vocalised
+    assert orphan_diacritic_ratio(vocalised) == 0.0
+
+
+def test_fragmented_text_is_detected():
+    fragmented = "فَق لْت لنفسي ر بما َه ي ن عْمَة فماذا تَرَى في القدس َحين تَز ور ها ل ك ب ت " * 4
+    assert fragmentation_ratio(fragmented) > 0.20
+    report = assess_document([assess_page(i, fragmented) for i in range(1, 4)])
+    assert report.status is IngestStatus.FAILED
+
+
+def test_mild_fragmentation_is_degraded_not_failed():
+    """Readable but imperfect text stays usable, with the learner warned."""
+    words = ["الكتاب", "المدرسة", "الطالب", "المعلم", "الحديقة", "الصباح"] * 20
+    words += ["ر", "ن", "ل"] * 7  # ~10% single letters, as the real PDF measured
+    text = " ".join(words)
+    ratio = fragmentation_ratio(text)
+    assert 0.08 < ratio < 0.20
+    report = assess_document([assess_page(i, text) for i in range(1, 4)])
+    assert report.status is IngestStatus.DEGRADED
+
+
+def test_fragmentation_ignores_small_samples():
+    """A heading of two words must not be judged."""
+    assert fragmentation_ratio("في القدس") == 0.0
+    assert orphan_diacritic_ratio("في القدس") == 0.0
+
+
+def test_fragmentation_ignores_latin():
+    assert fragmentation_ratio("a b c the quick brown fox jumps over a lazy dog today") == 0.0
+
+
+def test_genuine_one_letter_words_tolerated():
+    """Arabic has real one-letter proclitics; a few must not trip the gate."""
+    text = " ".join(["الكتاب", "المدرسة", "الطالب", "المعلم"] * 15 + ["و", "ل", "ب"])
+    assert fragmentation_ratio(text) < 0.08
 
 
 def test_partially_empty_document_is_degraded_not_failed():

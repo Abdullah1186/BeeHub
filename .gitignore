@@ -34,3 +34,5 @@ apps/web/dist/
 # NOTE: evals/cassettes/ and evals/baselines/ ARE committed on purpose —
 # they are what makes the default PR eval cost $0.
 evals/out/
+في_القدس.pdf
+supabase/apply_to_supabase.sql
