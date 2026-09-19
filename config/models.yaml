@@ -1,0 +1,48 @@
+# Model routing (spec §5.3), configured here rather than at call sites.
+#
+# Routes to a POOL, not a bare model. A pool is one prompt-cache namespace:
+# caches are model-scoped, so each extra model fragments the caching that §5.4
+# calls the biggest lever on total spend. Two pools, deliberately.
+#
+# Opus is excluded for cost. Measured: Sonnet 5 is ~60% cheaper per graded
+# answer (~$10 vs $25 per 1000), Haiku ~80% cheaper. The risk this accepts is
+# that §5.3 put Opus on error tagging because Arabic morphology is hard and bad
+# tags poison the metrics. The tagging eval's false-positive rate on correct
+# sentences is the tripwire; a full 30-case run costs ~$0.20 on Sonnet.
+#
+# app/ai/router.py refuses to route to an Opus model, so this decision cannot be
+# undone by an unreviewed edit here.
+
+version: 1
+
+defaults:
+  max_tokens: 4096
+
+pools:
+  # Anything graded, generated, or user-facing.
+  judgment:
+    model: claude-sonnet-5
+    # Raise to "high" for tagging before considering a stronger model —
+    # effort is the cheaper quality lever.
+    effort: medium
+    cache_ttl: 1h        # study sessions are bursty; 1h survives the gaps
+    min_cache_prefix_tokens: 1024
+
+  # Bulk extraction, run through the Batch API overnight.
+  mechanical:
+    model: claude-haiku-4-5
+    effort: null         # Haiku 4.5 rejects `effort`; it still uses budget_tokens
+    cache_ttl: 1h
+    min_cache_prefix_tokens: 4096
+
+tasks:
+  # max_tokens must cover THINKING as well as the JSON. With effort=medium,
+  # Sonnet 5 reasons before answering and those tokens count against the same
+  # budget -- at 4000 the reasoning consumed it and the JSON was truncated
+  # mid-string. These are sized with headroom; output is billed on what is
+  # actually produced, so a generous ceiling costs nothing when unused.
+  generate-comprehension-questions: {pool: judgment,   max_tokens: 16000, batch: true}
+  grade-short-answer:               {pool: judgment,   max_tokens: 16000}
+  tag-grammar-errors:               {pool: judgment,   max_tokens: 12000}
+  estimate-cefr-level:              {pool: judgment,   max_tokens: 8000, batch: true}
+  extract-vocab-from-chunk:         {pool: mechanical, max_tokens: 2000, batch: true}
