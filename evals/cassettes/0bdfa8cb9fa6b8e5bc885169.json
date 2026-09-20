@@ -4,14 +4,23 @@
   "key_points": [
     {
       "key_point_id": "kp1",
-      "status": "conveyed",
-      "evidence_span": "ذهبت إلى مكتوب البريد لإرسال الرسالة.",
-      "reasoning": "The learner produced a complete sentence with correct subject-verb-object structure, matching the source passage exactly."
+      "status": "partially_conveyed",
+      "evidence_span": "ذهبت إلى مكتوب البريد لإرسال الرسالة",
+      "reasoning": "The sentence is largely well-formed but contains a morphological error (مكتوب for مكتب), so it is not fully grammatical."
     }
   ],
   "unsupported_claims": [],
   "is_off_topic": false,
-  "language_errors": [],
-  "model_comprehension_score": 0.85,
-  "holistic_note": "The sentence is structurally sound and matches the source. Note that the source itself uses 'مكتوب البريد' where 'مكتب البريد' (post office) is intended, but since you copied it verbatim from the given text, this is not counted as your own error."
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "derived_noun",
+      "span": "مكتوب",
+      "correction": "مكتب",
+      "explanation": "The noun of place pattern maf'al (مكتب 'office') was replaced with the passive participle مكتوب ('written/letter'), confusing the intended meaning.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "Good sentence structure overall, but مكتوب البريد should be مكتب البريد (the post office); مكتوب means 'letter' or 'written', not 'office'."
 }

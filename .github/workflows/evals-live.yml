@@ -1,7 +1,7 @@
 # Tier 2: live evals. Costs real money (~$0.60 for the full suite).
 #
 # Gated three ways so it cannot fire by accident:
-#   1. `paths:` — only when skills/ or config/models.yaml actually changed.
+#   1. `paths:` — only when apps/api/skills/ or config/models.yaml changed.
 #      Everything else replays cassettes for free in tests.yml.
 #   2. `environment: evals` — a GitHub environment that can require approval
 #      before the job runs and holds the API key as a secret.
@@ -16,8 +16,8 @@ name: evals (live)
 on:
   pull_request:
     paths:
-      - "skills/**"
-      - "config/models.yaml"
+      - "apps/api/skills/**"
+      - "apps/api/config/models.yaml"
       - "evals/cases/**"
   workflow_dispatch:
     inputs:

@@ -4,14 +4,23 @@
   "key_points": [
     {
       "key_point_id": "kp1",
-      "status": "conveyed",
+      "status": "partially_conveyed",
       "evidence_span": "الولدان ذهبوا إلى الحديقة معا.",
-      "reasoning": "The learner reproduced the exact sentence given as the source example of a correct sentence for this task."
+      "reasoning": "The learner wrote a sentence in MSA, but it contains a dual/verb agreement error, so it is not fully grammatical."
     }
   ],
   "unsupported_claims": [],
   "is_off_topic": false,
-  "language_errors": [],
-  "model_comprehension_score": 0.9,
-  "holistic_note": "You reproduced the given sentence exactly as provided; note that in careful MSA the dual subject الولدان would take the dual verb ذهبا rather than the plural ذهبوا, though this reflects the source text itself rather than your own composition."
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "dual",
+      "span": "الولدان ذهبوا",
+      "correction": "الولدان ذهبا",
+      "explanation": "The dual subject الولدان requires the dual verb form ذهبا, not the plural ذهبوا.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good attempt at a simple sentence, but remember that a dual subject takes a dual verb: الولدان ذهبا، not ذهبوا."
 }

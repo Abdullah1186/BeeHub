@@ -86,23 +86,23 @@ Two properties this shape is built to guarantee:
 
 ```
 BeeHub/
-├── apps/api/               FastAPI backend (Railway)
-│   ├── app/
+├── apps/api/               FastAPI backend — a self-contained deployable
+│   ├── app/                Python package
 │   │   ├── ingest/         PDF → text → quality gate → chunks
 │   │   ├── retrieval/      gated chunk selection
 │   │   ├── embeddings/     Voyage provider (+ deterministic fake)
 │   │   ├── ai/             Claude client, routing, pricing
 │   │   ├── schemas/        Pydantic models = the model's output contract
 │   │   ├── grading/        score arithmetic (pure functions)
-│   │   ├── skills/         skill file loader + prompt hashing
+│   │   ├── skills/         the LOADER for skill files (not the files)
 │   │   ├── api/            HTTP endpoints
 │   │   └── worker.py       ingestion job runner
+│   ├── skills/             ALL prompt text lives here (§5.1)
+│   │   ├── _shared/        conventions, CEFR, taxonomy, output contract
+│   │   ├── generate-comprehension-questions.md
+│   │   └── grade-short-answer.md
+│   ├── config/models.yaml  model routing, no prompt text
 │   └── tests/              142 tests, no network, no API key
-│
-├── skills/                 ALL prompt text lives here (§5.1)
-│   ├── _shared/            conventions, CEFR, taxonomy, output contract
-│   ├── generate-comprehension-questions.md
-│   └── grade-short-answer.md
 │
 ├── evals/                  measurement harness
 │   ├── cases/              62 golden cases with known-correct outcomes
@@ -115,8 +115,16 @@ BeeHub/
 │   ├── tests/gate_test.sql the §5.2 guarantee, attacked
 │   └── local/              auth stub for offline testing
 │
-├── config/models.yaml      model routing, no prompt text
 └── .github/workflows/      free CI + gated paid CI
+
+> **Why skills/ sits inside apps/api rather than at the repo root** (departing
+> from the spec's layout): the backend is the only thing that needs them at
+> runtime, so keeping them inside makes it a self-contained deployable. Path
+> resolution is then a fixed `parents[1]`, with no discovery logic, no env vars,
+> and no build-context requirements. An earlier root-level layout resolved
+> paths by climbing `parents[3]`, which worked locally and would have broken on
+> any deployment whose build context was `apps/api/` — booting green and failing
+> on the first practice request.
 ```
 
 ---

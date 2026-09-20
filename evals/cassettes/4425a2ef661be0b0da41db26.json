@@ -6,12 +6,21 @@
       "key_point_id": "kp1",
       "status": "conveyed",
       "evidence_span": "علمت اللغة العربية في الجامعة لمدة سنتين وأتقنتها.",
-      "reasoning": "The sentence is grammatically well-formed Arabic, satisfying the requirement to write a correct sentence."
+      "reasoning": "The learner produced a coherent, largely grammatical MSA sentence about studying Arabic."
     }
   ],
   "unsupported_claims": [],
   "is_off_topic": false,
-  "language_errors": [],
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "verb_form",
+      "span": "علمت",
+      "correction": "تعلّمت",
+      "explanation": "Form I 'علم' means 'to know', but the intended meaning 'I learned' requires form V 'تعلّم'.",
+      "severity": "moderate"
+    }
+  ],
   "model_comprehension_score": 0.9,
-  "holistic_note": "The sentence is grammatically correct and complete, meeting the task's requirement."
+  "holistic_note": "Well-formed, mostly correct sentence. One verb-form slip: use تعلّمت (form V, 'I learned') rather than علمت (form I, 'I knew') when describing studying a language."
 }

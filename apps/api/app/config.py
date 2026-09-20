@@ -5,16 +5,40 @@ Secrets live in env vars only (spec §7). `.env.example` documents every key.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Repo root, from apps/api/app/config.py -> ../../../
-REPO_ROOT = Path(__file__).resolve().parents[3]
-SKILLS_DIR = REPO_ROOT / "skills"
-CONFIG_DIR = REPO_ROOT / "config"
+# skills/ and config/ live inside apps/api, alongside app/, so the backend is a
+# self-contained deployable unit. No discovery, no env vars, no build-context
+# gymnastics: the path is fixed relative to this file.
+#
+#   apps/api/app/config.py -> parents[1] is apps/api
+#
+# (app/skills/ is the Python package that LOADS these files; apps/api/skills/ is
+# the prompt markdown itself. Different things, deliberately kept apart.)
+API_ROOT = Path(__file__).resolve().parents[1]
+SKILLS_DIR = API_ROOT / "skills"
+CONFIG_DIR = API_ROOT / "config"
+
+# The repo root, for things that genuinely live above the backend (.env, evals).
+REPO_ROOT = API_ROOT.parents[1]
 EVALS_DIR = REPO_ROOT / "evals"
+
+
+def verify_paths() -> None:
+    """Fail at startup rather than on the first practice request."""
+    missing = []
+    if not (SKILLS_DIR / "_shared" / "error-taxonomy.yaml").is_file():
+        missing.append(f"skills not found at {SKILLS_DIR}")
+    if not (CONFIG_DIR / "models.yaml").is_file():
+        missing.append(f"config/models.yaml not found at {CONFIG_DIR}")
+    if missing:
+        raise RuntimeError(
+            "BeeHub cannot find its prompt files:\n  " + "\n  ".join(missing)
+        )
 
 
 class Settings(BaseSettings):

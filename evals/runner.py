@@ -186,17 +186,27 @@ def run_error_tagging(live: bool) -> SuiteResult:
     suite = SuiteResult(suite="error_tagging", prompt_hash=skill.prompt_hash)
 
     for case in spec["cases"]:
-        # Tagging runs through the grading skill with a trivial key point, so
-        # the tagger sees the same prompt it will see in production.
+        # Tagging runs through the grading skill so the tagger sees the prompt
+        # it will see in production.
+        #
+        # The sentence must appear ONLY as the learner's answer. An earlier
+        # version also passed it as source_passage and source_quote, which made
+        # the sentence its own source -- and the skill correctly instructs the
+        # tagger not to flag the source's own artefacts. The model then found
+        # every error and reported it in prose instead of as structured tags,
+        # scoring 48% for a reason that had nothing to do with its Arabic.
         user = json.dumps(
             {
-                "question": "اكتب جملة صحيحة.",
+                "question": "اكتب جملة عن الموضوع.",
                 "key_points": [
-                    {"id": "kp1", "text": "Any grammatical Arabic sentence.",
-                     "source_quote": case["sentence"]}
+                    {
+                        "id": "kp1",
+                        "text": "The learner writes a grammatical Arabic sentence.",
+                        "source_quote": "اكتب جملة صحيحة بالعربية الفصحى.",
+                    }
                 ],
                 "learner_answer": case["sentence"],
-                "source_passage": case["sentence"],
+                "source_passage": "اكتب جملة صحيحة بالعربية الفصحى.",
             },
             ensure_ascii=False,
         )

@@ -4,14 +4,23 @@
   "key_points": [
     {
       "key_point_id": "kp1",
-      "status": "absent",
+      "status": "partially_conveyed",
       "evidence_span": "فاطمة ذهب إلى السوق أمس.",
-      "reasoning": "The sentence has a subject-verb gender agreement error (فاطمة ذهب instead of فاطمة ذهبت), so it does not satisfy the requirement of a grammatically correct sentence."
+      "reasoning": "The learner produced a sentence but with a verb agreement error, so it is not fully grammatical."
     }
   ],
   "unsupported_claims": [],
   "is_off_topic": false,
-  "language_errors": [],
-  "model_comprehension_score": 0.1,
-  "holistic_note": "This sentence matches the given source text exactly, but it is not grammatically correct: 'فاطمة' is feminine and requires 'ذهبت', not 'ذهب'. Since this appears to be a copied artefact of the source rather than an independent composition error, it is not tagged as a new mistake, but the task required producing a correct sentence, which this does not achieve."
+  "language_errors": [
+    {
+      "category": "agreement",
+      "subcategory": "gender",
+      "span": "فاطمة ذهب",
+      "correction": "فاطمة ذهبت",
+      "explanation": "The feminine subject فاطمة requires the feminine verb form ذهبت rather than the masculine ذهب.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good simple sentence structure, but remember that فاطمة is feminine, so the verb must agree: فاطمة ذهبت إلى السوق أمس."
 }

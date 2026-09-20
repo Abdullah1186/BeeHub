@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import resources
 from app.auth import AuthenticatedUser, current_user
-from app.config import get_settings
+from app.config import CONFIG_DIR, SKILLS_DIR, get_settings, verify_paths
 
 settings = get_settings()
 
@@ -21,6 +21,12 @@ structlog.configure(
     ),
 )
 log = structlog.get_logger()
+
+# Fail at import, not on the first practice request. skills/ and config/ live
+# at the repo root, so a deployment whose build context is apps/api/ would
+# otherwise boot green and die later with FileNotFoundError.
+verify_paths()
+log.info("prompt_paths_ok", skills=str(SKILLS_DIR), config=str(CONFIG_DIR))
 
 app = FastAPI(title="BeeHub API", version="0.1.0")
 

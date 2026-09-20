@@ -2,7 +2,7 @@
 #
 # No API key is available to this workflow, and that is deliberate — it cannot
 # spend money even by accident. Tier 0 is pure logic; Tier 1 replays recorded
-# cassettes. If a PR touches skills/, the prompt hash changes, the cassettes
+# cassettes. If a PR touches apps/api/skills/, the prompt hash changes, cassettes
 # miss, and the eval job below refuses rather than silently passing.
 
 name: tests
@@ -82,7 +82,7 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Replay evals against recorded cassettes
-        # No --live, and no API key. A skills/ change invalidates the cassettes
+        # No --live, no API key. An apps/api/skills/ change invalidates cassettes
         # by hash, so this job fails and tells the author to re-record with
         # `make eval-live` rather than letting an unmeasured prompt through.
         run: python evals/runner.py --suite all
