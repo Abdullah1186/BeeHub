@@ -22,7 +22,7 @@ still looks like a plausible interval.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fsrs import Card, Rating, Scheduler
@@ -48,7 +48,22 @@ RETIRE_STABILITY_DAYS = 365.0
 # model currently thinks it is.
 MAX_LAPSES_BEFORE_KEEPING = 8
 
-_scheduler = Scheduler()
+# Learning steps OFF.
+#
+# By default FSRS runs a new card through short steps — the first "Good"
+# schedules it ~15 minutes out, so a word you just marked known reappears in
+# the same session. That is right for Anki, where a session IS the learning
+# phase, and wrong here: the deck's contract is that a known card LEAVES.
+#
+# Without steps the first answer schedules a real interval (2 -> 12 -> 45
+# days), so "I know it" means what it says. The cost is that a lapse would
+# also schedule days out, which is why `review()` overrides that below.
+_scheduler = Scheduler(learning_steps=(), relearning_steps=())
+
+# A card you did not know comes back inside the session, not in three days.
+# "Still learning" has to mean "show me again shortly" or the deck cannot
+# teach anything in one sitting.
+LAPSE_INTERVAL_MINUTES = 10
 
 
 @dataclass(frozen=True)
@@ -99,6 +114,10 @@ def review(
     reps += 1
     if rating is Rating.Again:
         lapses += 1
+        # Keep FSRS's stability and difficulty — they carry the memory model
+        # and the next successful review should build on them — but bring the
+        # card back within the session rather than days later.
+        card.due = now + timedelta(minutes=LAPSE_INTERVAL_MINUTES)
 
     stability = card.stability or 0.0
     retired = (

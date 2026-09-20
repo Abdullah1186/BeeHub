@@ -13,6 +13,7 @@ import pytest
 from fsrs import Rating
 
 from app.review.scheduler import (
+    LAPSE_INTERVAL_MINUTES,
     RETIRE_STABILITY_DAYS,
     new_card,
     review,
@@ -145,3 +146,57 @@ def test_scheduler_is_deterministic():
     """Same state and score must give the same schedule, or evals are noise."""
     state, _ = new_card(NOW)
     assert review(state, 0.8, now=NOW).due_at == review(state, 0.8, now=NOW).due_at
+
+
+# --- deck contract ---------------------------------------------------------
+# The deck promises that a card you mark known LEAVES. FSRS's default learning
+# steps break that promise: the first "Good" schedules a card ~15 minutes out,
+# so it reappears in the same session. Right for Anki, wrong here.
+
+
+def test_known_card_leaves_for_at_least_a_day():
+    """The first 'I know it' must schedule a real interval, not minutes."""
+    state, _ = new_card(NOW)
+    result = review(state, 0.85, now=NOW)
+    assert result.interval_days >= 1.0, (
+        f"a known card came back in {result.interval_days * 24:.1f} hours — "
+        "learning steps are back on"
+    )
+
+
+def test_still_learning_returns_within_the_session():
+    """The other half: an unknown card must come back in minutes, not days."""
+    state, _ = new_card(NOW)
+    result = review(state, 0.2, now=NOW)
+    minutes = result.interval_days * 24 * 60
+    assert minutes == pytest.approx(LAPSE_INTERVAL_MINUTES, abs=1)
+
+
+def test_lapse_keeps_the_memory_model():
+    """Bringing a card back soon must not reset what FSRS has learned."""
+    state, _ = new_card(NOW)
+    now = NOW
+    reps = lapses = 0
+    for _ in range(3):
+        r = review(state, 0.85, reps=reps, lapses=lapses, now=now)
+        state, reps, lapses, now = r.fsrs_state, r.reps, r.lapses, r.due_at
+
+    lapsed = review(state, 0.2, reps=reps, lapses=lapses, now=now)
+    # Stability survives the lapse, so the next success builds on it rather
+    # than starting from scratch.
+    assert lapsed.fsrs_state.get("stability") is not None
+    assert lapsed.lapses == lapses + 1
+
+
+def test_intervals_still_expand_without_learning_steps():
+    state, _ = new_card(NOW)
+    now = NOW
+    reps = lapses = 0
+    intervals = []
+    for _ in range(4):
+        r = review(state, 0.85, reps=reps, lapses=lapses, now=now)
+        intervals.append(r.interval_days)
+        state, reps, lapses, now = r.fsrs_state, r.reps, r.lapses, r.due_at
+
+    assert intervals == sorted(intervals)
+    assert intervals[0] >= 1.0
