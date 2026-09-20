@@ -254,11 +254,13 @@ def submit_answer(
         .execute()
     )
 
+    attempt_id = attempt.data[0]["id"]
+
     if grade.language_errors:
         client.table("error_tags").insert(
             [
                 {
-                    "attempt_id": attempt.data[0]["id"],
+                    "attempt_id": attempt_id,
                     "user_id": user.id,
                     "category": str(tag.category),
                     "subcategory": str(tag.subcategory),
@@ -270,6 +272,27 @@ def submit_answer(
                 for tag in grade.language_errors
             ]
         ).execute()
+
+        # Queue the errors for spaced repetition (§2.4: "only things previously
+        # got wrong"). Automatic rather than a button, because a queue that
+        # only holds what the learner remembered to add is a queue of the
+        # things they were already thinking about.
+        #
+        # Failure here must not cost the learner their graded answer, so it is
+        # swallowed — but loudly, the same lesson as the telemetry write.
+        try:
+            from app.api.review import enqueue_error_tags
+
+            queued = enqueue_error_tags(client, user.id, attempt_id)
+            if queued:
+                log.info("errors_queued_for_review", count=queued)
+        except Exception as exc:  # noqa: BLE001
+            log.error(
+                "review_enqueue_failed",
+                attempt_id=attempt_id,
+                error=str(exc),
+                hint="these errors will not resurface for review",
+            )
 
     # Consume the item so it is not served again.
     client.table("generated_items").update({"consumed_at": "now()"}).eq(

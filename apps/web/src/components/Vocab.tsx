@@ -30,12 +30,20 @@ export function Vocab({ resourceId, onBack }: { resourceId: string; onBack: () =
     try {
       const result = await api.harvestVocab(resourceId);
       await load();
+      // Three different outcomes hide behind "added: 0", and they need
+      // different actions from the learner. Saying "nothing worth learning"
+      // for all of them is wrong — and actively misleading when the words
+      // WERE found and then thrown away as damaged.
       setNote(
         result.added > 0
           ? `Added ${result.added} new ${result.added === 1 ? "word" : "words"}.`
-          : result.skipped_duplicates > 0
-            ? "Nothing new here — you already have these."
-            : "Nothing worth learning in that passage. Try again for a different one.",
+          : result.rejected_damaged > 0
+            ? `Found ${result.rejected_damaged} ${
+                result.rejected_damaged === 1 ? "word" : "words"
+              }, but they came out of the PDF split mid-word, so they would teach the wrong spelling. This usually means the file itself extracted poorly.`
+            : result.skipped_duplicates > 0
+              ? "Nothing new here — you already have these."
+              : "No new vocabulary in that passage — it may be a heading, or words you already know. Try again for a different one.",
       );
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));

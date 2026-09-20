@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
 import { Practice } from "./Practice";
+import { Review } from "./Review";
 import { Vocab } from "./Vocab";
 
 /** Spec §2.3 — the learning tab. Pick a resource, pick a mode.
@@ -10,7 +11,7 @@ import { Vocab } from "./Vocab";
  *  the shape of the product is visible and the spec's §2.3 table is legible in
  *  the UI rather than only in the document. */
 
-type Mode = "questions" | "vocab" | "essays" | "speaking" | "photo";
+type Mode = "questions" | "vocab" | "review" | "essays" | "speaking" | "photo";
 
 const MODES: {
   id: Mode;
@@ -18,6 +19,8 @@ const MODES: {
   blurb: string;
   ready: boolean;
   phase?: string;
+  /** Review draws from the whole queue, so it needs no material selected. */
+  standalone?: boolean;
 }[] = [
   {
     id: "questions",
@@ -30,6 +33,13 @@ const MODES: {
     label: "Vocabulary",
     blurb: "Flashcards built from the words in your own books.",
     ready: true,
+  },
+  {
+    id: "review",
+    label: "Review",
+    blurb: "Spaced repetition over what you got wrong. Needs no material.",
+    ready: true,
+    standalone: true,
   },
   {
     id: "essays",
@@ -106,6 +116,10 @@ export function Learning({
   }
 
   // Practising.
+  if (mode === "review") {
+    return <Review onBack={() => setMode(null)} />;
+  }
+
   if (selected && mode === "vocab") {
     return (
       <Vocab
@@ -229,10 +243,10 @@ export function Learning({
                 <Button
                   size="sm"
                   className="mt-4 w-full"
-                  disabled={!selected}
+                  disabled={!m.standalone && !selected}
                   onClick={() => setMode(m.id)}
                 >
-                  {selected ? "Start" : "Pick material first"}
+                  {m.standalone || selected ? "Start" : "Pick material first"}
                 </Button>
               )}
             </Card>

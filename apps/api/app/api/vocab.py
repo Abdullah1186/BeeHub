@@ -40,6 +40,11 @@ class VocabCard(BaseModel):
 class HarvestResult(BaseModel):
     added: int
     skipped_duplicates: int
+    # Words the model found but that were discarded as damaged — split
+    # mid-word by PDF extraction. Distinct from "found nothing", because the
+    # cause and the fix are completely different: one means try another
+    # passage, the other means this book extracts too poorly to teach from.
+    rejected_damaged: int = 0
     items: list[VocabCard]
 
 
@@ -162,7 +167,12 @@ def harvest(
         rejected=rejected,
         resource=resource_id,
     )
-    return HarvestResult(added=len(added), skipped_duplicates=skipped, items=added)
+    return HarvestResult(
+        added=len(added),
+        skipped_duplicates=skipped,
+        rejected_damaged=rejected,
+        items=added,
+    )
 
 
 def _is_intact_word(arabic: str, pos: str | None = None) -> bool:

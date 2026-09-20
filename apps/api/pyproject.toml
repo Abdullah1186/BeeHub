@@ -16,6 +16,7 @@ dependencies = [
     "voyageai>=0.3",
     "pymupdf>=1.24",              # Arabic extraction; see plan §2
     "pyyaml>=6.0",
+    "fsrs>=6.3",              # FSRS-6 spaced repetition (§2.4)
     "structlog>=24.4",
     "python-jose[cryptography]>=3.3",  # Supabase JWT verification
 ]

@@ -145,10 +145,49 @@ export interface VocabCard {
 export interface HarvestResult {
   added: number;
   skipped_duplicates: number;
+  /** Found, but discarded as damaged by PDF extraction. */
+  rejected_damaged: number;
   items: VocabCard[];
 }
 
+export interface ReviewCard {
+  id: string;
+  kind: "vocab" | "error_tag";
+  front: string;
+  back: string;
+  hint: string | null;
+  reps: number;
+  lapses: number;
+  due_at: string;
+}
+
+export interface ReviewResult {
+  next_due_at: string;
+  interval_days: number;
+  reps: number;
+  lapses: number;
+  retired: boolean;
+}
+
+export interface QueueStats {
+  due_now: number;
+  total_active: number;
+  retired: number;
+}
+
 export const api = {
+  reviewDue: (limit = 20) => request<ReviewCard[]>(`/review/due?limit=${limit}`),
+
+  reviewStats: () => request<QueueStats>("/review/stats"),
+
+  gradeReview: (cardId: string, score: number) =>
+    request<ReviewResult>("/review/grade", {
+      method: "POST",
+      body: JSON.stringify({ card_id: cardId, score }),
+    }),
+
+  enqueueVocab: () => request<QueueStats>("/review/enqueue-vocab", { method: "POST" }),
+
   vocabDeck: (resourceId?: string) =>
     request<VocabCard[]>(`/vocab/deck${resourceId ? `?resource_id=${resourceId}` : ""}`),
 

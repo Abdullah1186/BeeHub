@@ -8,7 +8,7 @@ import structlog
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import learning, metrics, resources, vocab
+from app.api import learning, metrics, resources, review, vocab
 from app.auth import AuthenticatedUser, current_user
 from app.config import CONFIG_DIR, SKILLS_DIR, get_settings, verify_paths
 
@@ -43,6 +43,7 @@ app.include_router(resources.router)
 app.include_router(learning.router)
 app.include_router(metrics.router)
 app.include_router(vocab.router)
+app.include_router(review.router)
 
 
 @app.get("/health")
