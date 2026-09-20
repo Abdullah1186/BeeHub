@@ -32,6 +32,7 @@ class FakeTable:
         self.store = store
         self.name = name
         self._filters: list[tuple[str, object]] = []
+        self._in_filters: list[tuple[str, set]] = []
         self._op: str | None = None
         self._payload = None
 
@@ -57,6 +58,10 @@ class FakeTable:
         self._filters.append((column, value))
         return self
 
+    def in_(self, column, values):
+        self._in_filters.append((column, set(values)))
+        return self
+
     def order(self, *_a, **_k):
         return self
 
@@ -64,7 +69,9 @@ class FakeTable:
         return self
 
     def _matches(self, row) -> bool:
-        return all(row.get(c) == v for c, v in self._filters)
+        return all(row.get(c) == v for c, v in self._filters) and all(
+            row.get(c) in vs for c, vs in self._in_filters
+        )
 
     def execute(self):
         rows = self.store.setdefault(self.name, [])
@@ -268,3 +275,69 @@ def test_english_pdf_is_rejected_by_the_gate():
     worker.process_job(client, client.store["ingest_jobs"][0])
     assert client.store["resources"][0]["ingest_status"] == "failed"
     assert client.store["resource_chunks"] == []
+
+
+# --- orphan recovery -------------------------------------------------------
+# Upload writes the resource and its job separately, so a fault between them
+# strands a resource at `pending` with nothing to process it. That happened for
+# real: ingest_jobs was missing an INSERT policy, the insert was rejected, and
+# the resource sat in the queue forever with no job behind it.
+
+
+def test_requeue_orphans_recovers_stranded_resource():
+    client = FakeClient()
+    client.store["resources"] = [
+        {"id": "r1", "user_id": "u1", "storage_path": "u1/r1.pdf", "ingest_status": "pending"}
+    ]
+    client.store["ingest_jobs"] = []
+
+    assert worker.requeue_orphans(client) == 1
+    assert len(client.store["ingest_jobs"]) == 1
+    assert client.store["ingest_jobs"][0]["resource_id"] == "r1"
+
+
+def test_requeue_orphans_ignores_resources_with_a_job():
+    """Must not double-queue work that is already pending."""
+    client = FakeClient()
+    client.store["resources"] = [
+        {"id": "r1", "user_id": "u1", "storage_path": "u1/r1.pdf", "ingest_status": "pending"}
+    ]
+    client.store["ingest_jobs"] = [
+        {"id": "j1", "resource_id": "r1", "status": "queued", "attempts": 0}
+    ]
+
+    assert worker.requeue_orphans(client) == 0
+    assert len(client.store["ingest_jobs"]) == 1
+
+
+def test_requeue_orphans_ignores_finished_resources():
+    client = FakeClient()
+    client.store["resources"] = [
+        {"id": "r1", "user_id": "u1", "storage_path": "u1/r1.pdf", "ingest_status": "ok"},
+        {"id": "r2", "user_id": "u1", "storage_path": "u1/r2.pdf", "ingest_status": "failed"},
+        {"id": "r3", "user_id": "u1", "storage_path": "u1/r3.pdf", "ingest_status": "degraded"},
+    ]
+    client.store["ingest_jobs"] = []
+
+    assert worker.requeue_orphans(client) == 0
+
+
+def test_requeue_orphans_recovers_from_a_dead_worker():
+    """A resource left `extracting` by a crashed worker is also stranded."""
+    client = FakeClient()
+    client.store["resources"] = [
+        {"id": "r1", "user_id": "u1", "storage_path": "u1/r1.pdf", "ingest_status": "extracting"}
+    ]
+    # The job was marked done, or lost, but the resource never moved on.
+    client.store["ingest_jobs"] = [
+        {"id": "j1", "resource_id": "r1", "status": "done", "attempts": 1}
+    ]
+
+    assert worker.requeue_orphans(client) == 1
+
+
+def test_requeue_orphans_noop_when_clean():
+    client = FakeClient()
+    client.store["resources"] = []
+    client.store["ingest_jobs"] = []
+    assert worker.requeue_orphans(client) == 0

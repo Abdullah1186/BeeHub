@@ -157,7 +157,25 @@ async def upload_pdf(
 
     # Queue extraction. The worker polls this table; nothing heavy happens in
     # the request cycle.
-    client.table("ingest_jobs").insert({"resource_id": resource_id}).execute()
+    #
+    # This is NOT transactional with the insert above, so a failure here would
+    # otherwise leave a resource stuck at `pending` with no job to process it —
+    # invisible except as a queue entry that never moves. That happened for
+    # real when ingest_jobs was missing an INSERT policy. Clean up and fail
+    # loudly instead of returning a half-created resource.
+    try:
+        client.table("ingest_jobs").insert({"resource_id": resource_id}).execute()
+    except Exception as exc:
+        log.error("queue_failed_rolling_back", resource_id=resource_id, error=str(exc))
+        try:
+            client.table("resources").delete().eq("id", resource_id).execute()
+            client.storage.from_(settings.storage_bucket).remove([storage_path])
+        except Exception as cleanup_exc:  # noqa: BLE001
+            log.error("rollback_incomplete", resource_id=resource_id, error=str(cleanup_exc))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="could not queue the file for processing; nothing was saved",
+        ) from exc
 
     log.info("resource_uploaded", resource_id=resource_id, size_mb=round(size_mb, 2))
     return ResourceOut(**result.data[0])

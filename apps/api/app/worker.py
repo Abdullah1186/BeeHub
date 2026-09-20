@@ -158,6 +158,40 @@ def process_job(client, job: dict) -> None:
     client.table("ingest_jobs").update({"status": "done"}).eq("id", job["id"]).execute()
 
 
+def requeue_orphans(client) -> int:
+    """Re-queue resources stuck with no job row.
+
+    Upload writes the resource and the job separately, so a crash between them
+    strands a resource at `pending` with nothing to process it — it simply
+    never moves. The upload path now rolls back, but this sweep recovers
+    anything already stranded, and anything stranded by a future fault.
+    """
+    stuck = (
+        client.table("resources")
+        .select("id")
+        .in_("ingest_status", ["pending", "extracting"])
+        .execute()
+    ).data or []
+    if not stuck:
+        return 0
+
+    jobs = (
+        client.table("ingest_jobs")
+        .select("resource_id")
+        .in_("status", ["queued", "running"])
+        .execute()
+    ).data or []
+    queued = {j["resource_id"] for j in jobs}
+
+    recovered = 0
+    for resource in stuck:
+        if resource["id"] not in queued:
+            client.table("ingest_jobs").insert({"resource_id": resource["id"]}).execute()
+            log.info("orphan_requeued", resource_id=resource["id"])
+            recovered += 1
+    return recovered
+
+
 def run_once(client) -> bool:
     """Process one job. Returns False when the queue is empty."""
     job = claim_job(client)
@@ -193,6 +227,10 @@ def main() -> int:
 
     client = service_client()
     log.info("worker_started", mode="once" if args.once else "poll")
+
+    recovered = requeue_orphans(client)
+    if recovered:
+        log.info("orphans_recovered", count=recovered)
 
     if args.once:
         processed = 0
