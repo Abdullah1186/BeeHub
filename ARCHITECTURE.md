@@ -1,24 +1,48 @@
 # BeeHub — how this repo works
 
-A guide to the codebase as it stands: what each piece does, why it is shaped
-that way, and which decisions departed from `BeehubSpec.md`.
+A complete guide to the codebase: what every piece does, why it is shaped that
+way, and where the spec turned out to be wrong.
 
-For *what the product is*, read the spec. This document is about the build.
+`BeehubSpec.md` describes *what the product is*. This describes *what was built*.
+
+**Contents**
+
+1. [What it does](#1-what-it-does)
+2. [Repo layout](#2-repo-layout)
+3. [Database schema](#3-database-schema)
+4. [Auth and security](#4-auth-and-security)
+5. [Ingestion: PDF → chunks](#5-ingestion-pdf--chunks)
+6. [Embeddings and retrieval (the RAG part)](#6-embeddings-and-retrieval-the-rag-part)
+7. [The AI layer](#7-the-ai-layer)
+8. [Grading and scoring](#8-grading-and-scoring)
+9. [The API](#9-the-api)
+10. [The frontend](#10-the-frontend)
+11. [Tests](#11-tests)
+12. [Evals](#12-evals)
+13. [Where the spec was wrong](#13-where-the-spec-was-wrong)
+14. [Running it](#14-running-it)
+15. [Current state](#15-current-state)
 
 ---
 
-## 1. The one-paragraph version
+## 1. What it does
 
 You upload Arabic learning material. It is extracted, checked for extraction
 damage, split into page-bounded chunks, and embedded. When you practise, the app
 picks a passage **you have actually read**, asks Claude to write a question
 grounded in that passage, and grades your answer against key points that were
-extracted at generation time. Every mark is computed in Python from the model's
-discrete verdicts, never taken as a number from the model.
+extracted at generation time.
 
----
+Two guarantees shape everything else:
 
-## 2. The core loop
+**Only material you have reached.** A question about page 200 when you are on
+page 40 spoils the book. Enforced in SQL, in one function, re-checked when the
+question is served.
+
+**Only text that actually exists.** A hallucinated question gets answered
+correctly from the page and marked wrong, which poisons every metric downstream.
+Every key point carries a verbatim quote, checked as a substring before the item
+is stored.
 
 ```
 ┌──────────┐   upload    ┌──────────────┐   queue    ┌──────────┐
@@ -32,7 +56,6 @@ discrete verdicts, never taken as a number from the model.
                                        │ passed?
                          ┌─────────────┴──────────────┐
                         no                           yes
-                         │                            │
                          ▼                            ▼
                  ingest_status =              resource_chunks
                  'failed', 0 chunks           (+ embeddings)
@@ -53,7 +76,6 @@ discrete verdicts, never taken as a number from the model.
                                                   │
                                     grounding check: every quote
                                     must be verbatim in the passage
-                                                  │
                                                   ▼
                                           generated_items (cached)
                                                   │
@@ -73,256 +95,739 @@ discrete verdicts, never taken as a number from the model.
                               language)
 ```
 
-Two properties this shape is built to guarantee:
-
-1. **A question can only come from material you have reached.** Enforced in SQL,
-   in one function, re-checked at serve time.
-2. **A question can only come from text that actually exists.** Every key point
-   carries a verbatim quote, checked as a substring before the item is stored.
-
 ---
 
-## 3. Repo layout
+## 2. Repo layout
 
 ```
 BeeHub/
-├── apps/web/               React + TS + Vite frontend (Vercel)
-│   ├── src/lib/            supabase client, typed API client
-│   ├── src/components/     Auth, Resources, Practice
-│   └── public/fonts/       Noto Naskh Arabic, self-hosted
+├── apps/
+│   ├── api/                    FastAPI backend — self-contained deployable
+│   │   ├── app/
+│   │   │   ├── main.py         app entry, router wiring, startup checks
+│   │   │   ├── config.py       settings + path resolution
+│   │   │   ├── db.py           two Supabase clients (user vs service)
+│   │   │   ├── auth.py         JWT verification (ES256 via JWKS)
+│   │   │   ├── worker.py       ingestion job runner
+│   │   │   ├── api/            HTTP endpoints: resources, learning
+│   │   │   ├── ingest/         extract → normalise → gate → chunk
+│   │   │   ├── retrieval/      gated chunk selection
+│   │   │   ├── embeddings/     Voyage provider + deterministic fake
+│   │   │   ├── ai/             Claude client, routing, pricing
+│   │   │   ├── schemas/        Pydantic models = the model's contract
+│   │   │   ├── grading/        score arithmetic (pure functions)
+│   │   │   ├── generation/     grounding validation
+│   │   │   └── skills/         the LOADER for skill files
+│   │   ├── skills/             ALL prompt text (§5.1)
+│   │   │   ├── _shared/        conventions, CEFR, taxonomy, contract
+│   │   │   ├── generate-comprehension-questions.md
+│   │   │   └── grade-short-answer.md
+│   │   ├── config/models.yaml  model routing
+│   │   └── tests/              155 tests, no network, no API key
+│   │
+│   └── web/                    React + TS + Vite (Vercel)
+│       ├── src/lib/            supabase client, typed API client
+│       ├── src/components/     Auth, Resources, Practice
+│       └── public/fonts/       Noto Naskh Arabic, self-hosted
 │
-├── apps/api/               FastAPI backend — a self-contained deployable
-│   ├── app/                Python package
-│   │   ├── ingest/         PDF → text → quality gate → chunks
-│   │   ├── retrieval/      gated chunk selection
-│   │   ├── embeddings/     Voyage provider (+ deterministic fake)
-│   │   ├── ai/             Claude client, routing, pricing
-│   │   ├── schemas/        Pydantic models = the model's output contract
-│   │   ├── grading/        score arithmetic (pure functions)
-│   │   ├── skills/         the LOADER for skill files (not the files)
-│   │   ├── api/            HTTP endpoints
-│   │   └── worker.py       ingestion job runner
-│   ├── skills/             ALL prompt text lives here (§5.1)
-│   │   ├── _shared/        conventions, CEFR, taxonomy, output contract
-│   │   ├── generate-comprehension-questions.md
-│   │   └── grade-short-answer.md
-│   ├── config/models.yaml  model routing, no prompt text
-│   └── tests/              142 tests, no network, no API key
-│
-├── evals/                  measurement harness
-│   ├── cases/              62 golden cases with known-correct outcomes
-│   ├── cassettes/          recorded responses → replay is free
-│   ├── baselines/          per-case pass record → regression detection
+├── evals/                      measurement harness
+│   ├── cases/                  62 golden cases with known outcomes
+│   ├── cassettes/              recorded responses → replay is free
+│   ├── baselines/              per-case pass record
 │   └── runner.py
 │
 ├── supabase/
-│   ├── migrations/         schema, RLS, gate functions
-│   ├── tests/gate_test.sql the §5.2 guarantee, attacked
-│   └── local/              auth stub for offline testing
+│   ├── migrations/             schema, RLS, functions, storage
+│   ├── tests/gate_test.sql     the position gate, attacked
+│   └── local/auth_stub.sql     offline stand-in for Supabase auth
 │
-└── .github/workflows/      free CI + gated paid CI
-
-> **Why skills/ sits inside apps/api rather than at the repo root** (departing
-> from the spec's layout): the backend is the only thing that needs them at
-> runtime, so keeping them inside makes it a self-contained deployable. Path
-> resolution is then a fixed `parents[1]`, with no discovery logic, no env vars,
-> and no build-context requirements. An earlier root-level layout resolved
-> paths by climbing `parents[3]`, which worked locally and would have broken on
-> any deployment whose build context was `apps/api/` — booting green and failing
-> on the first practice request.
+└── .github/workflows/          free CI + gated paid CI
 ```
+
+**`app/skills/` vs `apps/api/skills/`** — easy to confuse. The first is Python
+code that *loads* prompt files; the second is the prompt markdown itself.
+
+**Why prompts live inside `apps/api`** (departing from the spec's root-level
+layout): the backend is the only thing that needs them at runtime, so keeping
+them inside makes it self-contained. Path resolution is then a fixed
+`parents[1]`, with no discovery logic and no build-context requirements. An
+earlier root-level layout climbed `parents[3]`, which worked locally and would
+have broken on any deployment whose build context was `apps/api/` — booting
+green and failing on the first practice request.
 
 ---
 
-## 4. The parts that carry weight
+## 3. Database schema
 
-### 4.1 The quality gate — `app/ingest/quality.py`
-
-The highest-risk failure in the system is a PDF that extracts as garbage, gets
-chunked, and produces confident questions about text that is not what the book
-says. You answer correctly from the page and are marked wrong.
-
-So extraction is **gated**, not trusted:
+Ten tables. The full DDL is in `supabase/migrations/0001_init.sql`.
 
 ```
-        extract
-           │
-           ▼
-   NFKC normalise ──── repairs presentation forms (U+FExx → base letters)
-           │
-           ▼
-   ┌───────────────────────────────────────────┐
-   │ arabic ratio        < 0.15  → scan/empty  │
-   │ presentation forms  > 0.02  → bad encoding│
-   │ mean word length    > 25    → no spaces   │
-   │ reversed order      > 0.40  → visual order│
-   │ mirrored text       > 0.50  → char mirror │
-   │ fragmentation       > 0.20  → split words │
-   │ orphan diacritics   > 0.30  → detached    │
-   └───────────────┬───────────────────────────┘
-                   ▼
-        ok  │  degraded  │  failed
-             practice     NO chunks
-             + warning    NO generation
+auth.users (Supabase)
+    │ 1:1 via trigger
+    ▼
+profiles ──────┬──────────┬───────────┬──────────────┬─────────────┐
+               │          │           │              │             │
+               ▼          ▼           ▼              ▼             ▼
+          resources   attempts   vocab_items  level_estimates  model_calls
+               │          │
+      ┌────────┼──────┐   └──▶ error_tags
+      ▼        ▼      ▼
+resource_  generated_  ingest_
+ chunks      items      jobs
 ```
 
-Two of these detectors exist because real PDFs failed in ways the others missed:
+### The tables
 
-- **Mirrored text.** A generated Arabic PDF extracted fully reversed — word order
-  *and* letters within each word. The word-position heuristic could not see it,
-  because reversing a line also reverses the particles it looks for (`في` → `يف`).
-  Detected morphologically: Arabic words overwhelmingly start with `ال` and end
-  with `ة`/`ى`, and reversal inverts that distribution. Scores 0.93 on mirrored
-  text, 0.0 on correct Arabic.
+| Table | Holds | Notes |
+|---|---|---|
+| `profiles` | one row per user | mirrors `auth.users`; created by trigger |
+| `resources` | uploaded/registered material | carries `position_value` and `ingest_status` |
+| `resource_chunks` | the text itself | page-bounded, embedded |
+| `ingest_jobs` | the worker's queue | Postgres-backed, polled |
+| `generated_items` | cached questions | grounded, gated by `max_page` |
+| `attempts` | one per answer | **two** scores, not one |
+| `error_tags` | grammar errors | closed vocabulary |
+| `vocab_items` | harvested words | Phase 2 |
+| `level_estimates` | CEFR per skill | stores `numeric_ability` too |
+| `model_calls` | every API call | tokens, latency, cost (§7) |
 
-- **Intra-word fragmentation.** A real poetry PDF passed every check while 11% of
-  its tokens were single letters — `فَقُلْتُ` had become `فَق لْت`. The glyphs and
-  their order were fine; only token counting reveals it.
+### Columns that carry design decisions
 
-> **Never "fix" apparently-backwards Arabic by reversing it.** Extractors return
-> logical order; reversing again produces double-reversed text that looks
-> plausible and is wrong. Detect and quarantine instead.
+**`resources.position_value`** — how far you have read. `NULL` means untracked
+(a poetry collection read out of order), and the gate then allows everything.
+Uploads default it to **1**, not the document length: a whole-document default
+would make the gate meaningless from the first question.
 
-### 4.2 The position gate — `supabase/migrations/0003_functions.sql`
+**`resources.ingest_status`** ∈ `pending | extracting | ok | degraded | failed`
+plus `ingest_report` JSONB. `failed` means zero chunks exist, so no question can
+ever be generated. This is what stops unreadable text becoming practice.
 
-Spec §5.2: never generate from material past where the learner has reached.
+**`resource_chunks.text` and `text_normalized`** — two copies. `text` keeps
+diacritics for display and embedding; `text_normalized` folds them for keyword
+search. Spec §7: *normalise for search, never for display.*
+
+**`resource_chunks.page_start` / `page_end`** — equal in Phase 1, because the
+chunker never crosses a page. Both columns exist so Phase 2 can relax that. A
+chunk spanning pages 40–41 would be un-gateable when you are on page 40.
+
+**`generated_items.max_page`** — denormalised `max(page_end)` of the sources, so
+the serve-time gate is one integer comparison instead of a join.
+
+**`generated_items.source_chunk_ids`** with `check (cardinality(...) >= 1)` —
+the grounding guarantee, in the database.
+
+> **A bug this caught.** The constraint was first written as
+> `array_length(source_chunk_ids, 1) >= 1`. `array_length` returns **NULL** for
+> an empty array, and a Postgres CHECK that evaluates to NULL **passes** — so
+> the constraint was silently inert and accepted ungrounded items.
+> `cardinality()` returns 0 and is the correct form.
+
+**`attempts.content_score` and `language_score`** — separate on purpose. A right
+answer in broken Arabic should score high on one and low on the other, which is
+what lets reading and writing CEFR diverge as §2.5 requires.
+
+**`level_estimates.numeric_ability`** — the Elo/theta value CEFR is *derived*
+from, stored as the source of truth so the update rule can change without
+rewriting history.
+
+### Functions
+
+`supabase/migrations/0003_functions.sql`. All `security definer` with a pinned
+`search_path`, so the gate cannot be bypassed by a caller's schema.
+
+```
+resolve_max_page(resource, user) → int
+  ├─ not yours / missing  → -1          (expose nothing, leak nothing)
+  ├─ position_value NULL  → 2147483647  (untracked)
+  └─ position_value = N   → N
+```
+
+Every other function calls it. It is deliberately **not** reimplemented in
+Python: two implementations drift, and one of them eventually leaks.
+
+| Function | Used by | Purpose |
+|---|---|---|
+| `resolve_max_page` | all of the below | the gate itself |
+| `select_chunk_window` | generation | contiguous passage, recency-weighted |
+| `match_chunks` | vocab, Phase 2 | semantic search, gated |
+| `next_practice_item` | serving | next unseen in-range question |
+
+---
+
+## 4. Auth and security
+
+### Sign-in
+
+Supabase Auth. Magic link is the spec's choice; password sign-in exists too
+because Supabase's built-in SMTP allows only a few emails per hour, which makes
+link-only auth unusable in development.
+
+### Token verification — `app/auth.py`
+
+Supabase now signs with **ES256**, verified against the project's JWKS endpoint.
+The legacy shared HS256 secret is still accepted for tokens issued before a
+project migrates, so the token header's `alg` picks the path:
+
+```
+alg = ES256 / RS256 / EdDSA  → verify against JWKS public key   (preferred)
+alg = HS256                  → verify against SUPABASE_JWT_SECRET (legacy)
+anything else                → 401
+```
+
+JWKS is cached for 10 minutes and force-refreshed once on an unknown `kid`, so
+key rotation needs no redeploy. Tests cover the rejection paths, including
+`alg: none` forgery and an HS256 token when no secret is configured.
+
+### Row Level Security
+
+RLS is on for every user-owned table, from day one, even though this is
+currently single-user. Retrofitting it later means rewriting every query, and it
+keeps the position gate a **database guarantee** rather than an application
+promise.
 
 ```sql
-resolve_max_page(resource, user)
-  ├─ not your resource      → -1   (expose nothing)
-  ├─ position_value IS NULL → MAX  (untracked, all fair game)
-  └─ position_value = N     → N
+create policy resources_all on resources
+  for all using (user_id = auth.uid());
 ```
 
-Everything funnels through that one function. It is deliberately **not**
-reimplemented in Python: two implementations drift, and one of them eventually
-leaks.
+`resource_chunks` has no `user_id`, so its policy joins through the parent:
 
-It is re-applied at **serve** time as well as generation time, because you can
-move your position *backwards* — an item generated when you were further ahead
-must stop being served.
-
-`supabase/tests/gate_test.sql` attacks it: 1000 random selections, cross-user
-access, position rollback, window contiguity, and the grounding constraint.
-
-> **A bug this caught:** `array_length('{}', 1)` returns NULL, not 0 — and a
-> Postgres CHECK that evaluates to NULL **passes**. The grounding constraint was
-> silently inert and accepted ungrounded items. `cardinality()` is the correct
-> form.
-
-### 4.3 Retrieval is contiguous, not top-k — `app/retrieval/selector.py`
-
-Question generation does **not** use vector search.
-
-There is no query when the task is "ask me about what I just read". Top-k
-similarity returns semantically related but narratively *disconnected* fragments
-— exactly the input that produces incoherent comprehension questions.
-
-Instead: a contiguous run of chunks, weighted toward recent pages.
-
-> **A bug this caught:** the first recency weighting (`chunk_index * random()`)
-> put 99.3% of draws in the last ten pages; pages 1–20 were never selected in
-> 2000 draws. Review of earlier material was impossible. Now a mixture — 60%
-> from the recent third, else uniform — giving ~20% early / ~80% recent.
-
-Embeddings are used for vocab context and Phase 2 thematic search. They live in
-exactly one table: `resource_chunks.embedding`, `vector(1024)`.
-
-### 4.4 Grading: verdicts from the model, numbers from Python
-
-```
-generation time ──▶ key_points: [{id, text, source_quote}]
-                         │        (each quote verbatim in the passage)
-                         ▼
-grading time  ──▶ per key point: conveyed │ partially │ absent │ contradicted
-                  plus error tags from a CLOSED taxonomy
-                         │
-                         ▼
-compute_score()  ──▶ content_score   (→ reading CEFR)
-                     language_score  (→ writing CEFR)
-                     final_score
+```sql
+create policy resource_chunks_select on resource_chunks
+  for select using (
+    exists (select 1 from resources r
+            where r.id = resource_chunks.resource_id
+              and r.user_id = auth.uid())
+  );
 ```
 
-Three decisions encoded here:
+### Two database clients — `app/db.py`
 
-**Key points come from generation, not grading.** The grader only decides whether
-each was conveyed — far more repeatable than "grade this answer", and it costs
-nothing extra.
+| Client | Behaviour | Used by |
+|---|---|---|
+| `user_client(jwt)` | RLS applies | every request handler |
+| `service_client()` | **bypasses RLS** | the worker only |
 
-**`contradicted` ≠ `absent`.** Saying the opposite is a comprehension failure;
-saying nothing is an omission. A four-value enum catches near-misses that a
-boolean would miss entirely.
+The worker needs the bypass because it writes chunks for a user whose token it
+does not hold. **Using it in a request handler would undo every guarantee
+above.**
 
-**Minor errors cost nothing.** A learner who conveys the meaning with a hamza slip
-has comprehended. The error is still tagged and still feeds metrics and the
-review queue — it just does not reduce the mark. This is the fair-to-paraphrase
-guarantee, enforced in code rather than requested in a prompt.
+> **A bug this caught.** `user_client` originally called
+> `client.postgrest.auth(token)`, which authenticates the *database* client and
+> leaves storage on the anon key. Table queries succeeded while uploads were
+> rejected as anonymous — a confusing split that no test caught, because tests
+> never touch storage. The token now goes through `SyncClientOptions` at
+> construction, covering every sub-client.
 
-The model's own holistic score is recorded but **never used**. When it disagrees
-with the computed score by more than 0.3, the attempt is flagged — and those
-flags become free eval cases.
+### File storage
 
-### 4.5 Skills — `skills/*.md`, loaded by `app/skills/loader.py`
+Files live in a **private** Supabase bucket at `<user_id>/<resource_id>.pdf`.
+The path shape is what makes the policy work:
 
-All prompt text lives in markdown. No prompt strings in Python (§5.1).
+```sql
+(storage.foldername(name))[1] = auth.uid()::text
+```
+
+*"The first folder must be your own user ID."* Same idea as table RLS, applied
+to files. Without it, a public bucket would let anyone read any book by guessing
+a URL.
+
+---
+
+## 5. Ingestion: PDF → chunks
+
+The highest-risk part of the system. A PDF that extracts as garbage, gets
+chunked, and produces confident questions about text that is not what the book
+says is worse than no questions at all.
 
 ```
-error-taxonomy.yaml ─┬─▶ taxonomy.py  → closed StrEnums (Pydantic)
-                     └─▶ loader.py    → rendered into the prompt
+upload
+  │
+  ▼
+extract (PyMuPDF)          page numbers captured HERE, never reconstructed
+  │
+  ▼
+NFKC normalise             folds presentation forms U+FExx → base letters
+  │
+  ▼
+QUALITY GATE ──────────────────────────────────────┐
+  │                                                 │
+  ├─ ok        → chunk → embed → practice           │
+  ├─ degraded  → chunk → embed → practice + warning │
+  └─ failed    → ZERO chunks, generation impossible ┘
 ```
 
-One file feeds both, so the enum and the prompt cannot drift. A test asserts
-every enum member appears in the rendered prompt — the model cannot emit what it
-was never shown.
+### Extraction — `app/ingest/extract.py`
 
-**`prompt_hash` is sha256 of the fully rendered prompt**, not of the single file.
-Editing `error-taxonomy.yaml` changes the hash of every skill that includes it.
-Without that, evals would attribute a result to the wrong prompt version and you
-would tune against a lie.
+PyMuPDF, not pdfplumber or pypdf. Page numbers are captured at extraction time;
+concatenating a document and mapping offsets back to pages breaks on every
+hyphenation and header strip, and the position gate depends on the page being
+exactly right.
 
-### 4.6 Routing — `config/models.yaml` + `app/ai/router.py`
+> **Never "fix" apparently-backwards Arabic by reversing it.** Extractors
+> generally return logical order, and reversing again produces double-reversed
+> text that looks plausible and is wrong. Detect and quarantine instead.
+
+### Normalisation — `app/ingest/arabic_text.py`
+
+Two outputs from every page:
+
+| Function | Keeps | Used for |
+|---|---|---|
+| `normalize_for_display` | diacritics, letter forms | storage, display, embedding |
+| `normalize_for_search` | neither | keyword matching only |
+
+NFKC is the load-bearing step — it folds Arabic presentation forms (U+FBxx,
+U+FExx) back to base letters. Many extractors emit those isolated-glyph
+codepoints instead of real letters, which would otherwise make the text
+unsearchable and wrong when copied.
+
+The search form additionally strips harakat and folds `أإآ→ا`, `ى→ي`, `ة→ه`, so
+`كتب` matches `كَتَبَ`.
+
+### The quality gate — `app/ingest/quality.py`
+
+Seven checks, each corresponding to a real extraction failure:
+
+| Check | Threshold | Catches |
+|---|---|---|
+| Arabic ratio | < 0.15 | scan, empty page, Latin junk |
+| Presentation forms | > 0.02 *after NFKC* | unrepairable encoding |
+| Mean word length | > 25 chars | spaces not recovered |
+| Reversed word order | > 0.40 | visual-order extraction |
+| **Mirrored text** | > 0.50 | character-level reversal |
+| **Fragmentation** | > 0.20 | words split mid-word |
+| **Orphan diacritics** | > 0.30 | harakat detached from letters |
+
+The last three exist because real PDFs failed in ways the first four missed:
+
+> **Mirrored text.** A generated Arabic PDF extracted fully reversed — word order
+> *and* letters within each word. The word-position heuristic could not see it,
+> because reversing a line also reverses the particles it looks for (`في` → `يف`).
+> Detected morphologically instead: Arabic words overwhelmingly start with `ال`
+> and end with `ة`/`ى`, and reversal inverts that distribution. Scores 0.93 on
+> mirrored text, 0.0 on correct Arabic.
+
+> **Intra-word fragmentation.** A real poetry PDF (`في القدس`) passed every
+> check while 11% of its tokens were single letters — `فَقُلْتُ` had become
+> `فَق لْت`. The glyphs and their order were fine; only counting tokens reveals
+> it. Two independent signals are required, because Arabic has genuine one-letter
+> proclitics (`و`, `ل`, `ب`) and a leading harakat can legitimately follow a line
+> break in poetry.
+
+Verdicts: `degraded` still generates practice with a warning; `failed` produces
+**zero chunks**, so generation is structurally impossible rather than merely
+discouraged.
+
+### Chunking — `app/ingest/chunker.py`
+
+700 characters target, 1000 max, 120 overlap. **Never crosses a page boundary.**
+
+Character-based rather than token-based: at this size the variance does not
+justify an API round trip per chunk, and Arabic runs roughly 0.45–0.6 tokens per
+character, so 700 chars ≈ 350–420 tokens — one or two paragraphs.
+
+Split order: paragraph → sentence → clause → whitespace. **The sentence regex
+must include Arabic punctuation** — `؟` (U+061F) and `،` (U+060C). A naive
+`[.!?]` splitter finds almost no boundaries in Arabic prose and silently
+degrades to mid-sentence whitespace splits.
+
+### The worker — `app/worker.py`
+
+A Postgres-backed queue polled by a separate process, not Supabase Edge
+Functions — so the worker runs the same Python and the same PyMuPDF as the
+tests, and what CI verifies is what production executes.
+
+**The worker is not optional.** The API only queues the job; without the worker
+an upload sits at `pending` forever.
+
+---
+
+## 6. Embeddings and retrieval (the RAG part)
+
+This section is worth reading carefully, because **BeeHub's retrieval is
+deliberately not standard RAG** and the difference matters.
+
+### Standard RAG, and why it is wrong here
+
+The usual shape is: embed a user's question, find the top-k most similar chunks,
+stuff them into the prompt, answer.
+
+That works when there *is* a question. Here there isn't. The task is *"ask me
+about what I just read"*, and there is no query to embed.
+
+Worse, top-k similarity actively hurts. It returns chunks that are semantically
+related but **narratively disconnected** — a paragraph from page 12 and another
+from page 78 that happen to use similar vocabulary. A comprehension question
+built on that reads as incoherent, because the passage it describes never
+existed as a passage.
+
+### What BeeHub does instead
+
+**Generation uses a contiguous window, selected by position — no vectors at all.**
+
+```
+select_chunk_window(resource, user, window=3)
+  │
+  ├─ resolve_max_page  → 40          (the gate)
+  │
+  ├─ 60% of the time: pick a start uniformly from the RECENT THIRD
+  │  40% of the time: pick uniformly from EVERYTHING visible
+  │
+  └─ return chunks [start, start+3) where page_end <= 40
+                    ▲
+                    └─ contiguous: a real passage, in reading order
+```
+
+Two properties this buys:
+
+- **Coherence.** Adjacent chunks are a passage someone actually read.
+- **Gateability.** A contiguous run bounded by `page_end <= position` is trivially
+  checkable; a scattered top-k set is not.
+
+> **A bug this caught.** The first recency weighting was multiplicative —
+> `chunk_index * random()`. It put **99.3%** of draws in the last ten pages;
+> pages 1–20 were selected zero times in 2000 draws, making review of earlier
+> material impossible. The mixture above gives roughly 20% early / 80% recent
+> with nothing unreachable.
+
+### So where are embeddings used?
+
+`resource_chunks.embedding vector(1024)`, populated by the worker after the gate
+passes. Currently they serve:
+
+- **Vocab context** — finding the sentence a word appeared in (Phase 2)
+- **Thematic search** — "questions about this topic" (Phase 2)
+
+They are **not** used for question generation. This is a real departure from the
+spec's emphasis on pgvector, and the reason is the coherence problem above.
+
+### The provider — `app/embeddings/provider.py`
+
+Voyage `voyage-4-lite`, 1024 dimensions.
+
+**Why not 1536?** The spec said `vector(1536)`, which presumed OpenAI —
+Anthropic has no embeddings API. 1024 is a native Voyage output size, ~3×
+cheaper than OpenAI's small model, and sits safely under pgvector's **2000-dim
+HNSW ceiling** (2048 would exceed it and force `halfvec`).
+
+**The asymmetry matters.** Voyage embeds documents and queries differently,
+prepending a different instruction to each. A query embedded as a document
+retrieves measurably worse. That is baked into the interface as two methods
+rather than a keyword argument someone will forget:
+
+```python
+provider.embed_documents(texts)   # input_type="document"  — indexing
+provider.embed_query(text)        # input_type="query"     — searching
+```
+
+`FakeEmbeddings` mirrors the asymmetry deterministically, so tests catch a
+swapped call without spending anything or needing a key.
+
+### The index
+
+```sql
+create index chunks_vec_idx on resource_chunks
+  using hnsw (embedding vector_cosine_ops) with (m = 16, ef_construction = 64);
+```
+
+At 20 chunks this is irrelevant — HNSW earns its keep at thousands. It is there
+so the query shape does not have to change later.
+
+`embedding` is **nullable** on purpose: a chunk is stored first and embedded
+second, so a Voyage outage leaves usable text rather than failing the ingest.
+`match_chunks` skips unembedded rows rather than erroring.
+
+---
+
+## 7. The AI layer
+
+### Where prompts live
+
+**No prompt text in Python** (§5.1). Every instruction lives in
+`apps/api/skills/*.md` with YAML frontmatter:
+
+```yaml
+---
+id: grade-short-answer
+version: 2
+pool: judgment
+output_model: app.schemas.grading.ShortAnswerGrade
+includes: [_shared/output-contract, _shared/arabic-conventions, _shared/cefr-descriptors]
+---
+```
+
+`app/skills/loader.py` renders includes + body into one system prompt.
+
+### prompt_hash — the mechanism everything else depends on
+
+```
+prompt_hash = sha256(FULLY RENDERED prompt)
+```
+
+Not a hash of the single file. Editing `_shared/error-taxonomy.yaml` changes the
+hash of **every skill that includes it** — verified by test. Without that, evals
+would attribute a result to the wrong prompt version and you would tune against
+a lie.
+
+Rendering is byte-deterministic: includes in declared order, sorted YAML, no
+timestamps, no user IDs. Skills are loaded once at startup and **not
+hot-reloaded in production** — a mid-request change would break the cached
+prefix and produce two different results under one recorded hash.
+
+### The taxonomy: one file, two consumers
+
+```
+skills/_shared/error-taxonomy.yaml
+      │
+      ├──▶ app/schemas/taxonomy.py   → closed StrEnums (Pydantic)
+      └──▶ app/skills/loader.py      → rendered into the prompt
+```
+
+A prompt instruction saying "only use these categories" is necessary but not
+sufficient. The closed enum, passed through `messages.parse`, makes an
+out-of-vocabulary value **structurally impossible**. A CI test asserts every
+enum member appears in the rendered prompt — the model cannot emit what it was
+never shown. A pairing validator rejects crossed pairs like
+`orthography/broken_plural` that a flat subcategory enum would accept.
+
+### Routing — `apps/api/config/models.yaml`
 
 Routes to a **pool**, not a bare model. A pool is one prompt-cache namespace;
 caches are model-scoped, so each extra model fragments the caching that §5.4
 calls the biggest lever on spend.
 
-| Pool | Model | Used for |
+| Pool | Model | Tasks |
 |---|---|---|
 | `judgment` | `claude-sonnet-5` | generation, grading, tagging, CEFR |
 | `mechanical` | `claude-haiku-4-5` | bulk vocab extraction (batched) |
 
-**Opus is excluded for cost**, overriding §5.3. Sonnet is ~60% cheaper per graded
-answer (~$10 vs $25 per 1000). `router.py` raises if any pool resolves to Opus,
-so the decision cannot be undone by an unreviewed config edit.
+**Opus is excluded for cost**, overriding §5.3. Sonnet is ~60% cheaper per
+graded answer (~$10 vs $25 per 1000). `router.py` raises if any pool resolves to
+Opus, so the decision cannot be undone by an unreviewed config edit.
 
-The risk this accepts: §5.3 put Opus on error tagging because Arabic morphology
-is hard and bad tags poison the metrics. The tagging eval's **false-positive rate
-on correct sentences** is the tripwire.
+> **The risk this accepted, and how it was settled.** §5.3 put Opus on error
+> tagging because Arabic morphology is hard and bad tags poison the metrics.
+> Measured: tagging scores 34/40 (85%) with a **0% false-positive rate** — Sonnet
+> did not invent a single error across 8 correct sentences, including fully
+> vocalised text, a three-term iḍāfa chain, correct dual agreement and the
+> passive. That was the failure mode that would have quietly corrupted the
+> metrics tab, review queue and writing CEFR. Of the 6 failures, 3 are defensible
+> alternative categorisations rather than misses.
 
-**Measured, and the decision holds.** Tagging scores 34/40 (85%) with a
-**0% false-positive rate** — Sonnet did not invent a single error across 8
-correct sentences, including fully vocalised text, a three-term iḍāfa chain,
-correct dual agreement, and the passive. That was the failure mode that would
-have quietly corrupted the metrics tab, review queue, and writing CEFR.
+### The client — `app/ai/client.py`
 
-Of the 6 failures, 3 are defensible alternative categorisations rather than
-misses — `فاطمة ذهب` tagged `agreement/gender` instead of
-`morphology/verb_conjugation` is an honest reading of the same error. Only 3 are
-true misses (conditional mood, one register slip, one hamza seat).
+Every model call goes through `call_skill()`, so three things always happen:
 
-### 4.7 The frontend and RTL
+**1. Structured output.** `client.messages.parse(output_format=Model)` uses
+constrained decoding, so the response validates against the Pydantic model by
+construction. This replaces §5.5's parse-and-retry loop, written before
+structured outputs existed.
 
-Spec §7 makes RTL a non-negotiable, and the easy mistake is to set
-`dir="rtl"` on `<html>`. That flips the entire interface and makes mixed
-Arabic/English strings *worse*: the bidi algorithm needs direction declared at
-the boundary of each run, not globally.
+**2. Prompt caching.** The skill prompt is the cached prefix (`cache_control` on
+the system block); the variable content goes after it. Verified, not assumed:
+`CallResult.cache_hit` reads `cache_read_input_tokens`.
 
-So direction is per-element:
+Measured: 7799 tokens written once, read on every subsequent call — per-grade
+cost fell from **$0.035 to ~$0.006**.
+
+**3. Cost telemetry.** §7: *every model call is logged with model, token counts,
+latency and cost.* Failures are logged too — spend you cannot see is spend you
+cannot control.
+
+> **A bug this caught.** The first real generation call failed with an opaque
+> `Invalid JSON: EOF while parsing`. The cause was `max_tokens`: thinking at
+> `effort=medium` consumed the 4000-token budget before the JSON closed.
+> Truncation now reports itself by name, because its fix (raise `max_tokens`) is
+> completely different from the fix for a genuine schema violation.
+
+### Grounding enforcement — `app/generation/validate.py`
+
+Before a generated question is stored:
+
+| Check | Why |
+|---|---|
+| `source_chunk_ids` non-empty | must cite something |
+| all IDs within the retrieval set | cannot invent a source |
+| **every `source_quote` verbatim in the passage** | the real hallucination check |
+| refusal must be empty-handed | cannot claim unanswerable *and* return a question |
+
+The quote check is the one that works. Chunk IDs are trivial for a model to echo
+back; reproducing exact Arabic from text that was never there is not. Whitespace
+and Unicode form are normalised; **diacritics and letter forms are not**, so a
+quote that silently "corrects" the source still fails.
+
+> **A bug this caught.** `ComprehensionQuestion` had `min_length=1` on
+> `key_points`, which made the §5.2 refusal path *unrepresentable* — a passage
+> that cannot support a question must return `answerable_from_source: false` with
+> no key points, and the schema forbade exactly that, pushing the model to invent
+> a question rather than decline. Replaced with a validator carrying the real
+> rule: non-empty when answerable, empty when not.
+
+---
+
+## 8. Grading and scoring
+
+### Key points come from generation, not grading
+
+When a question is generated, the generator also emits the 1–3 facts a correct
+answer must contain, each with its verbatim supporting quote. Stored on
+`generated_items.payload`.
+
+The grader then decides only, **per key point**, whether the learner conveyed
+it. That is a far more repeatable judgement than "grade this answer", and it
+rides along on the generation call at no extra cost.
+
+### Four verdicts, not two
+
+| Verdict | Meaning |
+|---|---|
+| `conveyed` | expressed the fact; different wording is fine |
+| `partially_conveyed` | incomplete, but nothing false asserted |
+| `absent` | did not address it |
+| `contradicted` | **asserted something the source denies** |
+
+`contradicted` ≠ `absent` is what catches near-misses. A fluent, confident,
+wrong answer is a comprehension failure; saying nothing is an omission. A boolean
+would miss the distinction entirely.
+
+> **This distinction was tightened after an eval failure.** A learner said they
+> would read the book *at home* when the source said *the library*. The grader
+> marked it `partially_conveyed`, reasoning they got the book, the joint reading
+> and the timing right. The prompt now states that a **wrong detail is
+> `contradicted`, however much else is correct**, with worked examples showing
+> the boundary against genuine incompleteness.
+
+### The score is arithmetic, in Python
+
+`app/grading/score.py`. The model returns discrete verdicts; the number comes
+from here.
+
+```
+credit:   conveyed 1.0 | partially 0.5 | absent 0.0 | contradicted 0.0
+content_score    = mean(credits)                        → reading CEFR
+language_penalty = min(0.25, 0.05·moderate + 0.12·blocking)
+language_score   = 1.0 - language_penalty               → writing CEFR
+final            = round((content - penalty) × 5) / 5
+```
+
+Three decisions encoded:
+
+**Minor errors cost nothing.** A learner who conveys the meaning with a hamza
+slip has comprehended. The error is still tagged and still feeds metrics and the
+review queue — it just does not reduce the mark. This is the fair-to-paraphrase
+guarantee, enforced in code rather than requested in a prompt.
+
+**The penalty is capped at 0.25.** Without it, a long answer with many small
+errors could score zero despite perfect comprehension.
+
+**The model's own holistic score is never used.** It is recorded as a
+*disagreement signal*: when it differs from the computed score by more than 0.3,
+the attempt is flagged — and those flags become future eval cases.
+
+Why arithmetic rather than asking the model for a number: a learner disputing a
+mark can be shown exactly which key point was missed and what each error cost.
+Weights change here, in code, covered by free tests, without touching a prompt.
+
+---
+
+## 9. The API
+
+Every endpoint except `/health` requires `Authorization: Bearer <supabase-jwt>`.
+Handlers use an RLS-scoped client, so the database filters by user — the API
+never has to remember to.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | liveness; touches nothing external |
+| `GET` | `/me` | round-trips the JWT |
+| `POST` | `/resources/upload` | upload a PDF, queue ingestion |
+| `POST` | `/resources` | register material with no file |
+| `GET` | `/resources` | list |
+| `GET` | `/resources/{id}` | fetch one, with ingest report |
+| `PATCH` | `/resources/{id}/position` | move the reading position |
+| `GET` | `/learning/next` | serve a question |
+| `POST` | `/learning/answer` | grade an answer |
+
+### `POST /resources/upload`
+
+`multipart/form-data`: `file`, `title`, optional `author`, `level_hint`, and
+`position_value` (**defaults to 1**).
+
+Validates magic bytes and size *before* touching storage, writes the file to
+`<user_id>/<resource_id>.pdf`, creates the row as `pending`, and queues a job.
+Returns immediately — parsing happens in the worker.
+
+```
+201 → { id, title, ingest_status: "pending", ... }
+415 → not a PDF     413 → too large     502 → storage failed
+```
+
+### `GET /learning/next?resource_id=<uuid>`
+
+```
+┌─ cached unseen item in range? ──▶ return it            (no model call)
+│
+└─ none ──▶ select_chunk_window (gated, contiguous)
+               ├─ nothing visible ──────────▶ 409
+               └─▶ Claude generates
+                      ├─ quote not verbatim ─▶ 409  (rejected, not stored)
+                      ├─ unanswerable ───────▶ 409
+                      └─ valid ──────────────▶ store + return
+```
+
+`key_points` returns **text only** — the `source_quote` is withheld, since it
+would hand over the answer.
+
+**A 409 is not a bug.** It means the position gate has nothing to offer, or the
+passage genuinely could not support a grounded question. Both are §5.2 working.
+
+### `POST /learning/answer`
+
+One model call does grading *and* error tagging. Writes an `attempts` row, one
+`error_tags` row per tag, and marks the item consumed.
+
+```json
+{ "gradable": true,
+  "content_score": 1.0, "language_score": 0.85, "final_score": 0.8,
+  "key_point_verdicts": [
+    { "id": "kp2", "status": "contradicted", "why": "Says home; source says library." } ],
+  "errors": [
+    { "category": "syntax", "subcategory": "adjective_agreement",
+      "span": "الكتاب الجديدة", "correction": "الكتاب الجديد",
+      "explanation": "Masculine noun with a feminine adjective.",
+      "severity": "moderate" } ],
+  "feedback": "…" }
+```
+
+### Status codes
+
+| Code | Meaning |
+|---|---|
+| 401 | missing, malformed, or expired token |
+| 404 | not found, **or not yours** (indistinguishable by design) |
+| 409 | nothing to practise, or no groundable question |
+| 413 / 415 | too large / not a PDF |
+| 502 | upstream failure (storage or model) |
+| 422 | request body failed validation |
+
+---
+
+## 10. The frontend
+
+React + TypeScript + Vite + Tailwind v4. Three screens: `Auth`, `Resources`,
+`Practice`. ~830 lines total.
+
+### RTL, done properly
+
+Spec §7 makes RTL non-negotiable, and the easy mistake is `dir="rtl"` on
+`<html>`. That flips the entire interface and makes mixed Arabic/English
+*worse*: the bidi algorithm needs direction declared at the boundary of each
+run, not globally.
 
 ```html
-<html lang="en" dir="ltr">          <!-- chrome is English -->
-  …
-  <p class="arabic" dir="rtl" lang="ar">عن ماذا تحدث الولد؟</p>
+<html lang="en" dir="ltr">                      <!-- chrome is English -->
+  <p class="arabic" dir="rtl" lang="ar">…</p>   <!-- content declares itself -->
 ```
 
 Three details that matter in practice:
@@ -331,205 +836,125 @@ Three details that matter in practice:
   phrase adjacent to LTR text has its punctuation and digits reordered.
 - **`line-height: 2.1`** for Arabic. Harakat sit above *and* below the baseline
   and clip at typical Latin leading.
-- **Self-hosted font.** Noto Naskh Arabic (52 KB woff2, Arabic subset) rather
+- **Self-hosted font.** Noto Naskh Arabic (51 KB woff2, Arabic subset) rather
   than the Google CDN — the Arabic fallback stack is poor enough that a CDN
-  round trip produces severe layout shift on exactly the text that matters.
+  round trip causes severe layout shift on exactly the text that matters.
 
-The practice screen shows **understanding and accuracy as separate scores**, so a
-correct answer in imperfect Arabic visibly scores well on one and less on the
-other. That is the §2.5 distinction made visible rather than averaged away.
+### What the screens do
 
-A `409` from `/learning/next` renders as information, not an error — it means the
-position gate has nothing to offer, or no groundable question could be made.
+**Resources** polls every 3 seconds while anything is `pending` or `extracting`,
+so the worker's progress appears without a refresh. Each row shows its ingest
+status with the `ingest_report` reasons underneath, so a `degraded` resource
+explains itself.
 
+**Practice** shows **understanding and accuracy as separate scores**, making the
+§2.5 distinction visible rather than averaging it away. Error tags render the
+offending span struck through beside its correction. A 409 renders as
+information, not an error.
 
 ---
 
-## 5. API reference
+## 11. Tests
 
-All endpoints except `/health` require `Authorization: Bearer <supabase-jwt>`.
-Every handler uses an RLS-scoped client built from that token, so the database
-filters by user — the API never has to remember to.
+**155 tests. No network, no API key, no cost.** `make test`
 
-### Resources
-
-#### `POST /resources/upload`
-Upload a PDF. `multipart/form-data`.
-
-| Field | Type | Notes |
+| File | Tests | Covers |
 |---|---|---|
-| `file` | file | must be a real PDF (`%PDF` magic bytes, ≤ 50 MB) |
-| `title` | string | required |
-| `author` | string | optional |
-| `level_hint` | string | optional, `A1`–`C2` |
-| `position_value` | int | **defaults to 1**, not the whole document |
+| `test_quality.py` | 24 | the seven gate checks, both directions |
+| `test_embeddings.py` | 18 | dimensions, asymmetry, gate delegation |
+| `test_score.py` | 17 | score arithmetic, table-driven |
+| `test_api.py` | 15 | auth rejection, upload validation |
+| `test_taxonomy.py` | 14 | closed enums, pair validation, prompt sync |
+| `test_validate.py` | 13 | grounding enforcement |
+| `test_arabic_text.py` | 12 | normalisation, NFKC repair |
+| `test_chunker.py` | 12 | page boundaries, Arabic punctuation |
+| `test_worker.py` | 10 | job lifecycle, retry, idempotent re-ingest |
+| `test_pipeline.py` | 6 | end to end against generated PDFs |
 
-Stores the file, creates the resource with `ingest_status: "pending"`, and
-queues an ingestion job. Returns immediately — parsing happens in the worker.
+### Three things worth knowing
 
-> `position_value` defaults to page 1 rather than the full length on purpose. A
-> whole-document default would make the §5.2 gate meaningless from the first
-> question.
+**Real PDFs, not mocks.** `test_pipeline.py` and `test_worker.py` build actual
+PDF files with PyMuPDF. The bugs that matter live in the extractor's interaction
+with Arabic fonts, not in our code — a mocked extractor would have passed the
+mirrored-text bug.
 
-```
-201 → { id, title, ingest_status: "pending", ... }
-415 → not a PDF        413 → too large        502 → storage failed
-```
+**A fake Supabase client.** `test_worker.py` implements enough of the client
+surface to run the worker offline: job claiming, retry-to-max-attempts,
+idempotent re-ingestion, and the load-bearing assertion that **a failed quality
+gate stores zero chunks**.
 
-#### `POST /resources`
-Register material with no file — a paper book, a video, a podcast.
+**The tests are deliberately paranoid about direction.** For every "detects the
+bad thing" test there is a "does not flag the good thing" test — mirrored *and*
+correct Arabic, fragmented *and* heavily vocalised, because a false positive
+that blocks a legitimate book is as bad as a miss.
 
-```json
-{ "title": "ديوان المتنبي", "type": "poetry", "author": "المتنبي",
-  "level_hint": "C1", "position_value": 12, "position_unit": "page" }
-```
+### SQL tests — `make db-test`
 
-`type: "pdf"` is rejected here (400) — PDFs must go through `/upload` so they
-get queued for extraction.
-
-#### `GET /resources` · `GET /resources/{id}`
-List or fetch. Both return `ingest_status` and `ingest_report`, which is how the
-UI knows whether a resource is usable:
-
-```json
-{ "ingest_status": "degraded",
-  "ingest_report": {
-    "status": "degraded",
-    "reasons": ["10% of Arabic words extracted as single letters — …"],
-    "mean_fragmentation_ratio": 0.0975,
-    "needs_ocr": false } }
-```
-
-`404` covers both "no such resource" and "not yours" — RLS hides other users'
-rows, and the response leaks neither.
-
-#### `PATCH /resources/{id}/position`
-Move the learner's position. **This is the control that drives the §5.2 gate.**
-
-```json
-{ "position_value": 42, "position_unit": "page" }
-```
-
-Lowering it is legitimate (re-reading, or fixing a mistake). The gate re-applies
-at serve time, so questions already generated from beyond the new position stop
-being served.
-
-### Learning
-
-#### `GET /learning/next?resource_id=<uuid>`
-Serve a question.
+Seven tests against a real Postgres in Docker (`supabase/tests/gate_test.sql`):
 
 ```
-        ┌─ cached unseen item in range? ──▶ return it            (no model call)
-        │
-        └─ none ──▶ select_chunk_window (gated, contiguous)
-                       │
-                       ├─ nothing visible ──────────▶ 409
-                       │
-                       └─▶ Claude generates
-                              │
-                              ├─ quote not verbatim ─▶ 409  (rejected, not stored)
-                              ├─ unanswerable ───────▶ 409
-                              └─ valid ──────────────▶ store + return
+PASS resolve_max_page
+PASS grounding constraint rejects ungrounded items
+PASS window gate (1000 draws, max page 40)
+PASS position rollback respected
+PASS window contiguity
+PASS recency mixture (early=387, late=1613)
+PASS serve-time gate withholds out-of-range items
 ```
 
-```json
-{ "item_id": "…", "resource_id": "…",
-  "question_arabic": "عن ماذا تحدث الولد وصديقه؟",
-  "question_english": "What did the boy and his friend talk about?",
-  "difficulty_cefr": "B1",
-  "key_points": [ { "id": "kp1", "text": "They talked about a book…" } ] }
-```
-
-`key_points` carries the **text only**. The `source_quote` is withheld — it
-would hand over the answer.
-
-A `409` is not a bug. It means the position gate has nothing to offer, or the
-passage genuinely could not support a grounded question. Both are §5.2 working.
-
-#### `POST /learning/answer`
-Grade an answer. One model call does grading *and* error tagging.
-
-```json
-{ "item_id": "…", "answer": "تحدثا عن كتاب عن تاريخ الأندلس…" }
-```
-
-```json
-{ "gradable": true,
-  "content_score": 1.0,       // → reading CEFR
-  "language_score": 0.85,     // → writing CEFR
-  "final_score": 0.8,
-  "key_point_verdicts": [
-    { "id": "kp1", "status": "conveyed",     "why": "…" },
-    { "id": "kp2", "status": "contradicted", "why": "Says home; source says library." } ],
-  "errors": [
-    { "category": "syntax", "subcategory": "adjective_agreement",
-      "span": "الكتاب الجديدة", "correction": "الكتاب الجديد",
-      "explanation": "Masculine noun with a feminine adjective.",
-      "severity": "moderate" } ],
-  "feedback": "You understood the topic…" }
-```
-
-Writes an `attempts` row, one `error_tags` row per tag, and marks the item
-consumed so it is not served again.
-
-**The three scores are separate on purpose.** `content_score` measures
-comprehension, `language_score` measures accuracy, and they move independently —
-which is what lets reading and writing CEFR diverge, as §2.5 requires.
-
-### Errors
-
-| Code | Meaning |
-|---|---|
-| 401 | missing, malformed, or expired token |
-| 404 | not found, or not yours (indistinguishable by design) |
-| 409 | nothing to practise, or no groundable question |
-| 413 / 415 | file too large / not a PDF |
-| 502 | upstream failure (storage, or the model) |
-| 422 | request body failed validation |
-
+The 1000-draw test is the safety property: with position 40, nothing past page 40
+is ever returned. Cross-user access returns zero rows. A rollback from 40 to 10
+takes effect immediately.
 
 ---
 
-## 6. The evals harness
+## 12. Evals
 
-The problem: you have a grader that assigns marks. How do you know it is good?
+Unit tests check *your code*. Evals check *the model's judgement* — a different
+problem, because there is no assertion that "the grader is good".
 
-If you make it stricter, you might fix near-misses and simultaneously start
-punishing correct paraphrases — and never notice, because you would only see it
-as unexplained CEFR drift months later.
+The concrete risk: you make the grader stricter, it starts catching near-misses
+**and** starts punishing correct paraphrases, and you never notice because the
+aggregate score holds steady.
+
+### The cases — 62 total
+
+**`short_answer.yaml`** (22) — two halves testing opposite failure modes:
+
+- `paraphrase/*` (10) must score **high**. A grader that punishes valid
+  paraphrase teaches parroting instead of understanding.
+- `near_miss/*` (10) must score **low**. Fluent, plausible, and wrong.
+- `ungradable/*` (2) must refuse rather than invent a mark.
+
+**`error_tagging.yaml`** (40) — 32 sentences with known errors, plus **8 clean
+sentences** that measure false positives. The clean ones matter more: a tagger
+that invents errors in correct Arabic makes the metrics tab lie, and recall alone
+will never reveal it.
+
+Cases are engineered to be unambiguous, so **no LLM judge is used** — a judge
+would introduce a second unversioned prompt into the measurement loop.
 
 ### Four tiers
 
-| Tier | When | Cost | What it proves |
+| Tier | When | Cost | Proves |
 |---|---|---|---|
-| 0 | every commit | $0 | logic, schemas, arithmetic, the SQL gate |
+| 0 | every commit | $0 | logic, schemas, arithmetic, SQL gate |
 | 1 | every PR | $0 | replays cassettes; nothing regressed |
-| 2 | `skills/` changed | ~$0.60 | the model, today, behaves this way |
-| 3 | manual/scheduled | ~$0.60 | model drift, with repetitions |
+| 2 | `skills/` changed | ~$0.50 | the model, today, behaves this way |
+| 3 | manual | ~$0.50 | drift, with repetitions |
 
 ### The cassette mechanism
 
 ```
-cassette key = sha256(prompt_hash + case_id)
+cassette filename = sha256(prompt_hash + case_id)[:24]
 
 prompt unchanged ──▶ replay from disk ──▶ $0
-prompt  changed  ──▶ key misses       ──▶ CANNOT REPLAY, CI fails
+prompt  changed  ──▶ filename misses  ──▶ CANNOT REPLAY, exit 2, CI fails
 ```
 
-You **cannot** change a prompt and quietly pass on stale recordings. Either you
-re-measure, or the build stays red.
-
-### The cases
-
-- `short_answer.yaml` — 22 cases. `paraphrase/*` must score **high**;
-  `near_miss/*` must score **low**. Engineered to be unambiguous, so no LLM judge
-  is needed (a judge would put a second unversioned prompt in the measurement
-  loop).
-- `error_tagging.yaml` — 40 cases, 32 with known errors plus **8 clean sentences**
-  that measure false positives. The clean ones matter more: a tagger that invents
-  errors in correct Arabic makes the metrics tab lie, and recall alone will never
-  reveal it.
+You **cannot** change a prompt and pass on stale recordings. Either you
+re-measure, or the build stays red. Cassettes are committed on purpose — that is
+what makes a fresh CI checkout free.
 
 ### Per-case regression detection
 
@@ -541,13 +966,13 @@ Aggregate scores hide drift. A real example from this repo:
 | `paraphrase/concise` | pass | **fail** |
 | pass rate | 95% | **95%** |
 
-The average is identical; a fix and a break cancelled out. The runner compares
-**every case individually** and fails on any pass → fail flip, naming it.
+Identical average; a fix and a break cancelled out. The runner compares **every
+case individually** and fails on any pass → fail flip, naming it.
 
-> On investigation the grader was right and the *test* was wrong — the answer
-> genuinely omitted detail. The expectation was corrected, not the prompt. That
-> is a legitimate resolution, but only when it follows from reading the
-> reasoning, not as a reflex.
+> On investigation the grader was right and the *test* was wrong — that answer
+> genuinely omits detail from both key points. The expectation was corrected, not
+> the prompt. That is a legitimate resolution, but only when it follows from
+> reading the reasoning, not as a reflex.
 
 ### What replay does and does not prove
 
@@ -556,35 +981,44 @@ The average is identical; a fix and a break cancelled out. The runner compares
 | live | the grader, today, behaves this way |
 | replay | your code turns those verdicts into these scores; nothing regressed |
 
-A green replay means *"nothing changed since the last real measurement."* It does
-not mean the grader works. If Claude's behaviour shifts underneath us, cassettes
-still replay green — which is what Tier 3 is for.
+A green replay means *"nothing changed since the last real measurement."* If
+Claude's behaviour shifts underneath us, cassettes still replay green. That is
+the honest limit of Tier 1, and the reason Tier 3 exists.
+
+### Current results
+
+```
+short_answer   22/22 (100%)
+error_tagging  34/40  (85%)   false positives: 0/8
+```
 
 ---
 
-## 7. Where the spec was wrong
+## 13. Where the spec was wrong
 
 Verified against current docs and live APIs.
 
-| Spec | Reality | Why it matters |
+| Spec | Reality | Consequence |
 |---|---|---|
 | Sonnet 5 = $3/$15 | **$2/$10** | cost model was wrong |
 | `claude-haiku-4-5-20251001` | `claude-haiku-4-5` | dated IDs are wrong for current models |
 | `vector(1536)` | **1024** (Voyage) | Anthropic has no embeddings API; 1536 presumed OpenAI |
 | "JSON only, validate, retry" | `messages.parse(output_format=…)` | constrained decoding makes parse failure near-impossible |
-| "cache every skill file" | min prefix is **model-dependent** | below it, caching silently does nothing while still charging the write premium |
+| "cache every skill file" | min prefix is **model-dependent** | below it, caching silently does nothing while charging the write premium |
 | `budget_tokens` | removed on Sonnet 5 (400) | use `output_config.effort` |
 | retrieval as a model-called tool | retrieve-then-generate | the gate must be deterministic; a tool loop also forfeits the Batch API |
-| Opus for tagging/essays/CEFR | Sonnet everywhere | cost; risk tracked by the tagging eval |
+| Opus for tagging / essays / CEFR | Sonnet everywhere | cost; validated by the 0% false-positive rate |
+| `skills/` at repo root | inside `apps/api/` | makes the backend a self-contained deployable |
+| similarity search for practice | contiguous windows | top-k returns narratively disconnected fragments |
 
 ---
 
-## 8. Running it
+## 14. Running it
 
 ### Day to day
 
 ```bash
-make install     # venv, backend deps, and npm install
+make install     # venv, backend deps, npm install
 make dev         # api + worker + web together, ctrl-C stops all three
 ```
 
@@ -596,140 +1030,83 @@ make dev         # api + worker + web together, ctrl-C stops all three
 [web]    ➜  Local:   http://localhost:5173/
 ```
 
-Or run them separately, in three terminals:
+Or separately, in three terminals:
 
 ```bash
 make api         # :8000  FastAPI
-make worker      # polls for uploaded PDFs and processes them
+make worker      # polls for uploaded PDFs
 make web         # :5173  Vite
 ```
 
-**The worker is not optional.** Without it an upload sits at
-`ingest_status: pending` forever — the API only queues the job.
+**The worker is not optional.** Without it an upload sits at `pending` forever —
+the API only queues the job. `make worker-once` catches up on a backlog.
 
 ### Checks
 
 ```bash
-make test        # 155 tests, no network, no API key
+make test        # 155 tests, free
 make db-test     # position gate against real Postgres (needs Docker)
-make eval        # replay evals from cassettes — free
+make eval        # replay evals from cassettes, free
 make check       # all three
 
-make eval-live   # real API, re-records cassettes (~$0.60)
+make eval-live   # real API, re-records cassettes (~$0.50)
 ```
 
-CI runs `test`, `db-test` and `eval` on every push — **with no API key in the
-environment**, so it cannot spend money even through a bug. The live workflow
-fires only when `skills/` or `config/models.yaml` changes, behind a GitHub
-environment that can require approval.
+### Configuration
+
+`.env` at the repo root (gitignored; `.env.example` is the template):
+
+| Variable | Used by |
+|---|---|
+| `ANTHROPIC_API_KEY` | generation, grading |
+| `VOYAGE_API_KEY` | embeddings |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | API and frontend |
+| `SUPABASE_SERVICE_ROLE_KEY` | **worker only** — bypasses RLS |
+
+`apps/web/.env.local` mirrors the public values as `VITE_*`. Only `VITE_*`
+reaches the browser; never put a service role key there.
 
 ---
 
-## 9. A worked example
+## 15. Current state
 
-What actually happens when you upload a book and answer one question.
-
-**1. Upload.** `POST /resources/upload` with `position_value: 40`. The PDF goes
-to Supabase Storage, a `resources` row is created with `ingest_status: pending`,
-and an `ingest_jobs` row is queued. The request returns in under a second.
-
-**2. The worker picks it up.** Downloads the PDF, extracts page by page (page
-numbers captured at extraction, never reconstructed), NFKC-normalises each page,
-and runs the quality gate.
-
-Say the gate returns `degraded` — 10% of tokens are single letters. The resource
-is still usable, chunks are stored, and the UI shows a warning. Had it returned
-`failed`, **zero chunks** would be written and no question could ever be
-generated from it.
-
-**3. Chunks and embeddings.** ~700-character chunks, never crossing a page
-boundary, stored with `page_start`/`page_end`. Then embedded via Voyage into
-`vector(1024)`.
-
-**4. You ask for a question.** `GET /learning/next?resource_id=…`
-
-`next_practice_item` finds nothing cached, so generation runs.
-`select_chunk_window` resolves your position (40), picks a random *contiguous*
-run of 2–3 chunks from pages ≤ 40 — weighted toward recent pages but not
-exclusively — and returns them.
-
-**5. Claude writes a question.** It receives the passage, the chunk IDs, and your
-current CEFR level. It returns a question plus 1–3 key points, each with a
-verbatim quote.
-
-**6. Grounding is checked in code.** Every `source_quote` must appear verbatim in
-the passage. A quote that is paraphrased, "corrected", or invented fails, and the
-item is rejected rather than stored. Only then does it reach `generated_items`.
-
-**7. You answer.** `POST /learning/answer`. The grader sees the question, the key
-points *with* their quotes, your answer, and the passage. It returns a verdict
-per key point plus error tags — **not a score**.
-
-**8. Python computes the mark.**
-
-```
-kp1 conveyed (1.0) + kp2 contradicted (0.0)  →  content_score 0.50
-1 moderate error (0.05) + 2 minor (0.00)     →  language_penalty 0.05
-                                                language_score   0.95
-final = round((0.50 - 0.05) × 5) / 5         =  0.40
-```
-
-Minor errors cost nothing. A right answer in imperfect Arabic keeps its content
-score; the errors are still tagged and still feed the metrics.
-
-**9. Everything is recorded.** An `attempts` row with both scores, one
-`error_tags` row per tag, and a `model_calls` row with tokens, latency and cost.
-The item is marked consumed.
-
-If the model's own holistic score disagreed with the computed one by more than
-0.3, the attempt is flagged — and those flags become future eval cases.
-
-
----
-
-## 10. Current state
-
-### Working, end to end
+### Working, verified against the real project
 
 | | |
 |---|---|
 | Ingestion | upload → storage → worker → extract → gate → chunk → embed |
-| Position gate | §5.2, enforced in SQL, attacked by 7 tests |
+| Position gate | §5.2 in SQL, attacked by 7 tests |
 | Generation | grounded questions, verbatim-quote enforced |
-| Grading | verdicts + error tags in one call, score computed in Python |
+| Grading | verdicts + tags in one call, score computed in Python |
 | Telemetry | every call logged with tokens, latency, cost |
+| Frontend | auth, upload, position tracking, practice loop, RTL |
 | Evals | 62 cases, cassette replay, per-case regression detection |
-| Frontend | auth, upload, position tracking, the practice loop, RTL |
 
-### Measured
-
-- **Short answer: 22/22.** Valid paraphrase scores 1.00; a fluent near-miss
-  scores 0.00 as `contradicted` rather than merely absent.
-- **Error tagging: 34/40 (85%)**, with **0/8 false positives** on correct
-  Arabic. That was the tripwire for dropping Opus, and it held.
-- **Prompt caching live:** 7799 tokens written once, read thereafter — per-grade
-  cost fell from $0.035 to ~$0.006.
-- **155 tests**, no network or API key required. Both eval suites replay at $0.
+End-to-end on `في القدس`: 18 pages extracted → gate `degraded` (correct) →
+20 chunks → 20 embedded → a grounded A2 question from the opening couplet
+(*ما الذي منع الشاعر من الوصول إلى دار الحبيب؟*) → answer graded 100/100 with no
+false-positive tags.
 
 ### Not built yet
 
-From the spec's phases: vocab flashcards, the review queue with spaced
-repetition, the metrics tab, the home dashboard (Phase 2), speaking and photo
-upload (Phase 3).
+Vocab flashcards, the review queue with spaced repetition, the metrics tab, the
+home dashboard (Phase 2); speaking and photo upload (Phase 3).
 
 ### Known limitations
 
-**Heavily formatted bilingual PDFs may not be usable.** `في القدس` extracts with
-11% of its Arabic tokens split mid-word. The gate correctly marks it `degraded`,
-and the model correctly refuses to ground a question in it
-(`answerable_from_source: false`). That is the system behaving as designed, but
-it means that particular file cannot produce practice. Plain Arabic prose
-extracts far better.
+**Heavily formatted bilingual PDFs extract poorly.** `في القدس` has 11% of its
+Arabic tokens split mid-word. The gate marks it `degraded` and the model refuses
+to ground questions in the worst passages — correct behaviour, but it means such
+files yield less practice than their length suggests. Plain Arabic prose is far
+better material.
 
-**Eval coverage is 62 cases on synthetic Arabic.** They are unambiguous by
-construction, which makes them reliable — but they do not cover damaged
-extraction, poetry, or classical registers. Real flagged attempts should feed
-back as cases over time.
+**Eval coverage is 62 synthetic cases.** Unambiguous by construction, which makes
+them reliable, but they do not cover damaged extraction, poetry, or classical
+registers. Flagged attempts should feed back as cases over time.
 
-**One worker, no locking.** `claim_job` is safe for a single worker. Running two
-would need `SELECT … FOR UPDATE SKIP LOCKED` over a direct connection.
+**One worker, no locking.** `claim_job` is safe for a single worker. Two would
+need `SELECT … FOR UPDATE SKIP LOCKED` over a direct connection.
+
+**Cassettes cannot detect model drift.** A green replay means nothing changed
+locally, not that the grader still behaves the same. Only a periodic live run
+tells you that.
