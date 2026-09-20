@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
 import { Practice } from "./Practice";
+import { Vocab } from "./Vocab";
 
 /** Spec §2.3 — the learning tab. Pick a resource, pick a mode.
  *
@@ -27,9 +28,8 @@ const MODES: {
   {
     id: "vocab",
     label: "Vocabulary",
-    blurb: "Flashcards and a matching game, built from your own books.",
-    ready: false,
-    phase: "Phase 2",
+    blurb: "Flashcards built from the words in your own books.",
+    ready: true,
   },
   {
     id: "essays",
@@ -106,6 +106,18 @@ export function Learning({
   }
 
   // Practising.
+  if (selected && mode === "vocab") {
+    return (
+      <Vocab
+        resourceId={selected}
+        onBack={() => {
+          setSelected(null);
+          setMode(null);
+        }}
+      />
+    );
+  }
+
   if (selected && mode === "questions") {
     return (
       <Practice

@@ -132,7 +132,29 @@ export interface Overview {
   cost_usd_total: number;
 }
 
+export interface VocabCard {
+  id: string;
+  arabic: string;
+  root: string | null;
+  pos: string | null;
+  translation: string;
+  context_sentence: string | null;
+  resource_id: string | null;
+}
+
+export interface HarvestResult {
+  added: number;
+  skipped_duplicates: number;
+  items: VocabCard[];
+}
+
 export const api = {
+  vocabDeck: (resourceId?: string) =>
+    request<VocabCard[]>(`/vocab/deck${resourceId ? `?resource_id=${resourceId}` : ""}`),
+
+  harvestVocab: (resourceId: string) =>
+    request<HarvestResult>(`/vocab/harvest?resource_id=${resourceId}`, { method: "POST" }),
+
   overview: () => request<Overview>("/metrics/overview"),
 
   me: () => request<{ id: string; email: string | null }>("/me"),
