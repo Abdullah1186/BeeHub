@@ -34,6 +34,16 @@ jobs:
     environment: evals      # add a required reviewer here to gate spend
     steps:
       - uses: actions/checkout@v4
+        with:
+          # On a pull_request trigger, checkout defaults to the MERGE commit in
+          # detached HEAD state, so the cassette push below would have nothing
+          # to push to. head_ref puts us on the PR's actual branch.
+          # (Empty on workflow_dispatch, where the default checkout is correct.)
+          ref: ${{ github.head_ref }}
+          # The default GITHUB_TOKEN cannot push; a PAT is needed when branch
+          # protection or required checks are enabled on the target branch.
+          token: ${{ secrets.EVALS_PUSH_TOKEN || github.token }}
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -54,6 +64,9 @@ jobs:
       - name: Commit refreshed cassettes and baselines
         # Cassettes are committed deliberately: they are what makes every
         # subsequent PR free. Pushing them back means the next run replays.
+        # Skipped on workflow_dispatch, where head_ref is empty and there is no
+        # PR branch to push to — re-record locally with `make eval-live` instead.
+        if: github.event_name == 'pull_request'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

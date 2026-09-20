@@ -44,10 +44,15 @@ class ComprehensionQuestion(BaseModel):
 
     question_arabic: str = Field(description="The question, in Modern Standard Arabic.")
     question_english: str = Field(description="English gloss, shown only on request.")
+    # NOT min_length=1: a refusal (answerable_from_source=False) must return an
+    # empty list, and §5.2 makes refusing the correct behaviour for a passage
+    # that cannot support a question. A schema that forbids the refusal forces
+    # the model to invent one instead. The model_validator below enforces the
+    # real rule: non-empty when answerable, empty when not.
     key_points: list[KeyPoint] = Field(
-        min_length=1,
+        default_factory=list,
         max_length=3,
-        description="The 1-3 facts a correct answer must convey.",
+        description="The 1-3 facts a correct answer must convey. Empty if unanswerable.",
     )
     source_chunk_ids: list[str] = Field(
         min_length=1, description="IDs of the chunks this question was built from."
@@ -60,6 +65,14 @@ class ComprehensionQuestion(BaseModel):
             "worse than none."
         )
     )
+
+    @model_validator(mode="after")
+    def answerable_implies_key_points(self) -> ComprehensionQuestion:
+        if self.answerable_from_source and not self.key_points:
+            raise ValueError(
+                "answerable_from_source is True but no key points were given"
+            )
+        return self
 
 
 # ---------------------------------------------------------------------------
