@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* Arabic typography (spec §7).
+   Noto Naskh Arabic, self-hosted rather than loaded from the Google CDN: the
+   fallback stack for Arabic is poor, so a CDN round trip produces severe layout
+   shift on the text that matters most. */
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  src: url("/fonts/NotoNaskhArabic.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+  /* Arabic, Arabic Supplement, Extended-A, and presentation forms. */
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@theme {
+  --font-arabic: "Noto Naskh Arabic", "Geeza Pro", "Al Bayan", serif;
+  --color-bee-50:  #fffbeb;
+  --color-bee-100: #fef3c7;
+  --color-bee-500: #f59e0b;
+  --color-bee-600: #d97706;
+  --color-bee-700: #b45309;
+}
+
+:root {
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  margin: 0;
+  background: #fafaf9;
+  color: #1c1917;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Arabic content.
+   line-height is generous because Arabic diacritics sit above and below the
+   baseline and are clipped at typical Latin leading. */
+.arabic {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  line-height: 2.1;
+  font-size: 1.25rem;
+}
+
+/* An RTL input inside an LTR page: the caret and placeholder must follow the
+   text direction, not the surrounding layout. */
+.arabic-input {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  line-height: 2;
+  font-size: 1.125rem;
+}
+
+/* Isolate a bidirectional run so neighbouring text cannot reorder it.
+   Without this, an Arabic phrase followed by an English one renders with
+   punctuation and digits in the wrong place. */
+.bidi-isolate { unicode-bidi: isolate; }
+
+img { max-width: 100%; }
+[hidden] { display: none !important; }

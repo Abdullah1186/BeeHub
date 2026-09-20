@@ -1,0 +1,21 @@
+<!doctype html>
+<!--
+  lang/dir are set per-element, not globally. The interface chrome is English
+  (LTR); Arabic content carries dir="rtl" on its own elements.
+
+  Spec §7 requires correct bidirectional handling where the two mix. Forcing
+  dir="rtl" on <html> would flip the whole UI and make mixed strings worse, not
+  better — the browser's bidi algorithm needs the direction declared at the
+  boundary of each run.
+-->
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>BeeHub — Arabic Learning Hub</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

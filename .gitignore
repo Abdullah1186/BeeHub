@@ -36,3 +36,4 @@ apps/web/dist/
 evals/out/
 في_القدس.pdf
 supabase/apply_to_supabase.sql
+apps/web/.env.local
