@@ -1,6 +1,6 @@
 {
-  "prompt_hash": "1016617684ce8f7a1025698e5920470c826d1bf293dab3e17385bb17781a6687",
-  "pass_rate": 0.9545,
+  "prompt_hash": "e1ba14162ff7a3fa8c92c4459edfabb07d1b2faa2af437e458f12e8ccd0c3e2c",
+  "pass_rate": 1.0,
   "cases": {
     "paraphrase/synonyms": true,
     "paraphrase/reordered": true,
@@ -13,7 +13,7 @@
     "paraphrase/partial_vocalisation": true,
     "paraphrase/dialect_tinged": true,
     "near_miss/wrong_subject": true,
-    "near_miss/wrong_place": false,
+    "near_miss/wrong_place": true,
     "near_miss/wrong_time": true,
     "near_miss/plausible_invention": true,
     "near_miss/negation_flip": true,

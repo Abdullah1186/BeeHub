@@ -307,7 +307,153 @@ true misses (conditional mood, one register slip, one hamza seat).
 
 ---
 
-## 5. The evals harness
+## 5. API reference
+
+All endpoints except `/health` require `Authorization: Bearer <supabase-jwt>`.
+Every handler uses an RLS-scoped client built from that token, so the database
+filters by user — the API never has to remember to.
+
+### Resources
+
+#### `POST /resources/upload`
+Upload a PDF. `multipart/form-data`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `file` | file | must be a real PDF (`%PDF` magic bytes, ≤ 50 MB) |
+| `title` | string | required |
+| `author` | string | optional |
+| `level_hint` | string | optional, `A1`–`C2` |
+| `position_value` | int | **defaults to 1**, not the whole document |
+
+Stores the file, creates the resource with `ingest_status: "pending"`, and
+queues an ingestion job. Returns immediately — parsing happens in the worker.
+
+> `position_value` defaults to page 1 rather than the full length on purpose. A
+> whole-document default would make the §5.2 gate meaningless from the first
+> question.
+
+```
+201 → { id, title, ingest_status: "pending", ... }
+415 → not a PDF        413 → too large        502 → storage failed
+```
+
+#### `POST /resources`
+Register material with no file — a paper book, a video, a podcast.
+
+```json
+{ "title": "ديوان المتنبي", "type": "poetry", "author": "المتنبي",
+  "level_hint": "C1", "position_value": 12, "position_unit": "page" }
+```
+
+`type: "pdf"` is rejected here (400) — PDFs must go through `/upload` so they
+get queued for extraction.
+
+#### `GET /resources` · `GET /resources/{id}`
+List or fetch. Both return `ingest_status` and `ingest_report`, which is how the
+UI knows whether a resource is usable:
+
+```json
+{ "ingest_status": "degraded",
+  "ingest_report": {
+    "status": "degraded",
+    "reasons": ["10% of Arabic words extracted as single letters — …"],
+    "mean_fragmentation_ratio": 0.0975,
+    "needs_ocr": false } }
+```
+
+`404` covers both "no such resource" and "not yours" — RLS hides other users'
+rows, and the response leaks neither.
+
+#### `PATCH /resources/{id}/position`
+Move the learner's position. **This is the control that drives the §5.2 gate.**
+
+```json
+{ "position_value": 42, "position_unit": "page" }
+```
+
+Lowering it is legitimate (re-reading, or fixing a mistake). The gate re-applies
+at serve time, so questions already generated from beyond the new position stop
+being served.
+
+### Learning
+
+#### `GET /learning/next?resource_id=<uuid>`
+Serve a question.
+
+```
+        ┌─ cached unseen item in range? ──▶ return it            (no model call)
+        │
+        └─ none ──▶ select_chunk_window (gated, contiguous)
+                       │
+                       ├─ nothing visible ──────────▶ 409
+                       │
+                       └─▶ Claude generates
+                              │
+                              ├─ quote not verbatim ─▶ 409  (rejected, not stored)
+                              ├─ unanswerable ───────▶ 409
+                              └─ valid ──────────────▶ store + return
+```
+
+```json
+{ "item_id": "…", "resource_id": "…",
+  "question_arabic": "عن ماذا تحدث الولد وصديقه؟",
+  "question_english": "What did the boy and his friend talk about?",
+  "difficulty_cefr": "B1",
+  "key_points": [ { "id": "kp1", "text": "They talked about a book…" } ] }
+```
+
+`key_points` carries the **text only**. The `source_quote` is withheld — it
+would hand over the answer.
+
+A `409` is not a bug. It means the position gate has nothing to offer, or the
+passage genuinely could not support a grounded question. Both are §5.2 working.
+
+#### `POST /learning/answer`
+Grade an answer. One model call does grading *and* error tagging.
+
+```json
+{ "item_id": "…", "answer": "تحدثا عن كتاب عن تاريخ الأندلس…" }
+```
+
+```json
+{ "gradable": true,
+  "content_score": 1.0,       // → reading CEFR
+  "language_score": 0.85,     // → writing CEFR
+  "final_score": 0.8,
+  "key_point_verdicts": [
+    { "id": "kp1", "status": "conveyed",     "why": "…" },
+    { "id": "kp2", "status": "contradicted", "why": "Says home; source says library." } ],
+  "errors": [
+    { "category": "syntax", "subcategory": "adjective_agreement",
+      "span": "الكتاب الجديدة", "correction": "الكتاب الجديد",
+      "explanation": "Masculine noun with a feminine adjective.",
+      "severity": "moderate" } ],
+  "feedback": "You understood the topic…" }
+```
+
+Writes an `attempts` row, one `error_tags` row per tag, and marks the item
+consumed so it is not served again.
+
+**The three scores are separate on purpose.** `content_score` measures
+comprehension, `language_score` measures accuracy, and they move independently —
+which is what lets reading and writing CEFR diverge, as §2.5 requires.
+
+### Errors
+
+| Code | Meaning |
+|---|---|
+| 401 | missing, malformed, or expired token |
+| 404 | not found, or not yours (indistinguishable by design) |
+| 409 | nothing to practise, or no groundable question |
+| 413 / 415 | file too large / not a PDF |
+| 502 | upstream failure (storage, or the model) |
+| 422 | request body failed validation |
+
+
+---
+
+## 6. The evals harness
 
 The problem: you have a grader that assigns marks. How do you know it is good?
 
@@ -378,7 +524,7 @@ still replay green — which is what Tier 3 is for.
 
 ---
 
-## 6. Where the spec was wrong
+## 7. Where the spec was wrong
 
 Verified against current docs and live APIs.
 
@@ -395,7 +541,7 @@ Verified against current docs and live APIs.
 
 ---
 
-## 7. Running it
+## 8. Running it
 
 ```bash
 make install     # venv + deps
@@ -415,19 +561,113 @@ environment that can require approval.
 
 ---
 
-## 8. Current state
+## 9. A worked example
 
-**Working end to end:** ingestion with the quality gate, the position gate,
-embeddings, grounded question generation, grading with error tagging, score
-arithmetic, cost telemetry, and the evals harness.
+What actually happens when you upload a book and answer one question.
 
-**Measured:** short-answer 22/22. Prompt caching live — 7799 tokens written once,
-read thereafter, dropping per-grade cost from $0.035 to ~$0.006.
+**1. Upload.** `POST /resources/upload` with `position_value: 40`. The PDF goes
+to Supabase Storage, a `resources` row is created with `ingest_status: pending`,
+and an `ingest_jobs` row is queued. The request returns in under a second.
 
-**Not yet built:** frontend, vocab flashcards, review queue, metrics tab,
-speaking, photo upload. Phases 2–4 of the spec.
+**2. The worker picks it up.** Downloads the PDF, extracts page by page (page
+numbers captured at extraction, never reconstructed), NFKC-normalises each page,
+and runs the quality gate.
 
-**Known limitation:** `في القدس` extracts too fragmented to generate from — the
-model correctly refuses with `answerable_from_source: false`. Heavily formatted
-bilingual poetry PDFs may simply not be usable material; plain Arabic prose
-should work far better.
+Say the gate returns `degraded` — 10% of tokens are single letters. The resource
+is still usable, chunks are stored, and the UI shows a warning. Had it returned
+`failed`, **zero chunks** would be written and no question could ever be
+generated from it.
+
+**3. Chunks and embeddings.** ~700-character chunks, never crossing a page
+boundary, stored with `page_start`/`page_end`. Then embedded via Voyage into
+`vector(1024)`.
+
+**4. You ask for a question.** `GET /learning/next?resource_id=…`
+
+`next_practice_item` finds nothing cached, so generation runs.
+`select_chunk_window` resolves your position (40), picks a random *contiguous*
+run of 2–3 chunks from pages ≤ 40 — weighted toward recent pages but not
+exclusively — and returns them.
+
+**5. Claude writes a question.** It receives the passage, the chunk IDs, and your
+current CEFR level. It returns a question plus 1–3 key points, each with a
+verbatim quote.
+
+**6. Grounding is checked in code.** Every `source_quote` must appear verbatim in
+the passage. A quote that is paraphrased, "corrected", or invented fails, and the
+item is rejected rather than stored. Only then does it reach `generated_items`.
+
+**7. You answer.** `POST /learning/answer`. The grader sees the question, the key
+points *with* their quotes, your answer, and the passage. It returns a verdict
+per key point plus error tags — **not a score**.
+
+**8. Python computes the mark.**
+
+```
+kp1 conveyed (1.0) + kp2 contradicted (0.0)  →  content_score 0.50
+1 moderate error (0.05) + 2 minor (0.00)     →  language_penalty 0.05
+                                                language_score   0.95
+final = round((0.50 - 0.05) × 5) / 5         =  0.40
+```
+
+Minor errors cost nothing. A right answer in imperfect Arabic keeps its content
+score; the errors are still tagged and still feed the metrics.
+
+**9. Everything is recorded.** An `attempts` row with both scores, one
+`error_tags` row per tag, and a `model_calls` row with tokens, latency and cost.
+The item is marked consumed.
+
+If the model's own holistic score disagreed with the computed one by more than
+0.3, the attempt is flagged — and those flags become future eval cases.
+
+
+---
+
+## 10. Current state
+
+### Working, end to end
+
+| | |
+|---|---|
+| Ingestion | upload → storage → worker → extract → gate → chunk → embed |
+| Position gate | §5.2, enforced in SQL, attacked by 7 tests |
+| Generation | grounded questions, verbatim-quote enforced |
+| Grading | verdicts + error tags in one call, score computed in Python |
+| Telemetry | every call logged with tokens, latency, cost |
+| Evals | 62 cases, cassette replay, per-case regression detection |
+
+### Measured
+
+- **Short answer: 22/22.** Valid paraphrase scores 1.00; a fluent near-miss
+  scores 0.00 as `contradicted` rather than merely absent.
+- **Error tagging: 34/40 (85%)**, with **0/8 false positives** on correct
+  Arabic. That was the tripwire for dropping Opus, and it held.
+- **Prompt caching live:** 7799 tokens written once, read thereafter — per-grade
+  cost fell from $0.035 to ~$0.006.
+- **155 tests**, no network or API key required. Both eval suites replay at $0.
+
+### Not built yet
+
+The **frontend**. There is no way to use any of this without curl — the single
+biggest gap between "working system" and "app you can learn Arabic with".
+
+Then, from the spec's phases: vocab flashcards, the review queue with spaced
+repetition, the metrics tab, the home dashboard (Phase 2), speaking and photo
+upload (Phase 3).
+
+### Known limitations
+
+**Heavily formatted bilingual PDFs may not be usable.** `في القدس` extracts with
+11% of its Arabic tokens split mid-word. The gate correctly marks it `degraded`,
+and the model correctly refuses to ground a question in it
+(`answerable_from_source: false`). That is the system behaving as designed, but
+it means that particular file cannot produce practice. Plain Arabic prose
+extracts far better.
+
+**Eval coverage is 62 cases on synthetic Arabic.** They are unambiguous by
+construction, which makes them reliable — but they do not cover damaged
+extraction, poetry, or classical registers. Real flagged attempts should feed
+back as cases over time.
+
+**One worker, no locking.** `claim_job` is safe for a single worker. Running two
+would need `SELECT … FOR UPDATE SKIP LOCKED` over a direct connection.
