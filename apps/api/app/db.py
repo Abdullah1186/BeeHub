@@ -18,6 +18,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from supabase import Client, create_client
+from supabase.lib.client_options import SyncClientOptions
 
 from app.config import get_settings
 
@@ -41,6 +42,20 @@ def user_client(access_token: str) -> Client:
         raise RuntimeError(
             "SUPABASE_URL and SUPABASE_ANON_KEY are required; see .env.example"
         )
-    client = create_client(settings.supabase_url, settings.supabase_anon_key)
+    # The token must reach EVERY sub-client, not just postgrest.
+    #
+    # `client.postgrest.auth(token)` alone authenticates database calls but
+    # leaves storage on the anon key, so uploads run as an anonymous user and
+    # storage RLS rejects them ("new row violates row-level security policy")
+    # while table queries succeed — a confusing split that took a live upload
+    # to surface. Setting the Authorization header at construction covers all
+    # of them.
+    client = create_client(
+        settings.supabase_url,
+        settings.supabase_anon_key,
+        options=SyncClientOptions(
+            headers={"Authorization": f"Bearer {access_token}"}
+        ),
+    )
     client.postgrest.auth(access_token)
     return client

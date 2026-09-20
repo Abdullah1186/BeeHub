@@ -38,7 +38,10 @@ db-reset: db-up ## Drop, recreate, and re-apply every migration
 	@# this is a local stand-in so migrations can be applied and tested offline.
 	@docker cp supabase/local/auth_stub.sql $(PG_CONTAINER):/tmp/ >/dev/null
 	@$(PSQL) -q -f /tmp/auth_stub.sql 2>&1 | grep -v "already exists" || true
+	@# 0004_storage.sql needs Supabase's storage schema, which plain Postgres
+	@# does not have. Skipped locally; applied to the real project only.
 	@for f in supabase/migrations/*.sql; do \
+	  case "$$f" in *_storage.sql) echo "  skipping $$(basename $$f) (needs Supabase storage schema)"; continue;; esac; \
 	  echo "  applying $$(basename $$f)"; \
 	  docker cp $$f $(PG_CONTAINER):/tmp/ >/dev/null; \
 	  $(PSQL) -v ON_ERROR_STOP=1 -q -f /tmp/$$(basename $$f) || exit 1; \
