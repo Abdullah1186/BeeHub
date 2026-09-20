@@ -1,4 +1,4 @@
-.PHONY: help install test db-up db-down db-reset db-test check api web eval eval-live eval-baseline
+.PHONY: help install install-web test db-up db-down db-reset db-test check api web worker worker-once dev eval eval-live eval-baseline
 
 PG_CONTAINER := beehub-pg
 PG_IMAGE     := pgvector/pgvector:pg17
@@ -11,8 +11,11 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-install: ## Create the venv and install backend deps
+install: install-web ## Install backend and frontend dependencies
 	cd apps/api && python3 -m venv .venv && .venv/bin/python -m pip install -q -e ".[dev]"
+
+install-web: ## Install frontend dependencies
+	cd apps/web && npm install
 
 test: ## Tier 0 tests — no network, no API key, no cost
 	cd apps/api && .venv/bin/python -m pytest -q
@@ -65,8 +68,28 @@ eval-baseline: ## Re-record cassettes AND reset the baseline (deliberate reset)
 check: test db-test eval ## Everything that runs for free
 	@echo "all checks passed"
 
-api: ## Run the API locally
+api: ## Run the API on :8000
 	cd apps/api && .venv/bin/uvicorn app.main:app --reload --port 8000
 
-web: ## Run the frontend locally
+web: ## Run the frontend on :5173
 	cd apps/web && npm run dev
+
+worker: ## Run the ingestion worker (polls for uploads)
+	cd apps/api && .venv/bin/python -m app.worker
+
+worker-once: ## Process any queued uploads, then exit
+	cd apps/api && .venv/bin/python -m app.worker --once
+
+dev: ## Run api + worker + web together (ctrl-C stops all three)
+	@echo "api    -> http://localhost:8000"
+	@echo "web    -> http://localhost:5173"
+	@echo "worker -> polling for uploads"
+	@echo
+	@# -l line-buffers sed, without which each stream's output is held in a
+	@# 4KB block and the logs appear in bursts (or not at all).
+	@# PYTHONUNBUFFERED does the same for the Python side.
+	@trap 'kill 0' EXIT INT TERM; \
+	  (cd apps/api && PYTHONUNBUFFERED=1 .venv/bin/uvicorn app.main:app --reload --port 8000 2>&1 | sed -l 's/^/[api]    /') & \
+	  (cd apps/api && PYTHONUNBUFFERED=1 .venv/bin/python -m app.worker 2>&1 | sed -l 's/^/[worker] /') & \
+	  (cd apps/web && npm run dev 2>&1 | sed -l 's/^/[web]    /') & \
+	  wait

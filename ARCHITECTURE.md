@@ -581,16 +581,41 @@ Verified against current docs and live APIs.
 
 ## 8. Running it
 
+### Day to day
+
 ```bash
-make install     # venv + deps
-make test        # 142 tests, no network, no API key
-make db-test     # position gate against real Postgres (Docker)
+make install     # venv, backend deps, and npm install
+make dev         # api + worker + web together, ctrl-C stops all three
+```
+
+`make dev` prefixes each stream so one terminal shows everything:
+
+```
+[api]    INFO:     Uvicorn running on http://127.0.0.1:8000
+[worker] worker_started  mode=poll
+[web]    ➜  Local:   http://localhost:5173/
+```
+
+Or run them separately, in three terminals:
+
+```bash
+make api         # :8000  FastAPI
+make worker      # polls for uploaded PDFs and processes them
+make web         # :5173  Vite
+```
+
+**The worker is not optional.** Without it an upload sits at
+`ingest_status: pending` forever — the API only queues the job.
+
+### Checks
+
+```bash
+make test        # 155 tests, no network, no API key
+make db-test     # position gate against real Postgres (needs Docker)
 make eval        # replay evals from cassettes — free
-make check       # all of the above
+make check       # all three
 
 make eval-live   # real API, re-records cassettes (~$0.60)
-make api         # uvicorn on :8000
-make web         # vite on :5173
 ```
 
 CI runs `test`, `db-test` and `eval` on every push — **with no API key in the
