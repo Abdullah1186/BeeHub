@@ -43,7 +43,12 @@ export function Vocab({ resourceId, onBack }: { resourceId: string; onBack: () =
               }, but they came out of the PDF split mid-word, so they would teach the wrong spelling. This usually means the file itself extracted poorly.`
             : result.skipped_duplicates > 0
               ? "Nothing new here — you already have these."
-              : "No new vocabulary in that passage — it may be a heading, or words you already know. Try again for a different one.",
+              // Deliberately vague about the cause, because the app cannot tell
+            // them apart: the model may have found a heading, or judged the
+            // words too basic for the CEFR level it was given — and that level
+            // is a default until the estimation job runs. Claiming "words you
+            // already know" asserts knowledge the system does not have.
+            : "Nothing new came back from that passage. Try again — a different part of the book may have more.",
       );
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));

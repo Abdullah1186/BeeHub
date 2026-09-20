@@ -206,6 +206,49 @@ def get_resource(
     return ResourceOut(**result.data[0])
 
 
+@router.get("/{resource_id}/file")
+def get_file_url(
+    resource_id: str, user: AuthenticatedUser = Depends(current_user)
+) -> dict[str, str]:
+    """A short-lived signed URL for the original PDF.
+
+    Signed rather than public: the bucket is private, and a permanent link
+    would outlive the session and be shareable by accident. One hour is long
+    enough to read a chapter and short enough not to matter if it leaks.
+    """
+    settings = get_settings()
+    client = user_client(user.token)
+
+    rows = (
+        client.table("resources")
+        .select("storage_path, title")
+        .eq("id", resource_id)
+        .execute()
+    ).data
+    if not rows:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+
+    storage_path = rows[0].get("storage_path")
+    if not storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="this resource has no uploaded file",
+        )
+
+    try:
+        signed = client.storage.from_(settings.storage_bucket).create_signed_url(
+            storage_path, 3600
+        )
+    except Exception as exc:
+        log.error("signed_url_failed", resource_id=resource_id, error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="could not produce a link to the file",
+        ) from exc
+
+    return {"url": signed.get("signedURL") or signed.get("signedUrl", "")}
+
+
 @router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resource(
     resource_id: str, user: AuthenticatedUser = Depends(current_user)

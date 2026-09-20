@@ -90,10 +90,35 @@ def harvest(
         )
 
     level = _current_level(client, user.id)
+
+    # Tell the model which words the learner already has.
+    #
+    # Without this it can only guess from a CEFR level — "an A2 learner knows
+    # ذهب" — which is a guess about a level that, before the estimation job
+    # exists, is itself a default. Passing the actual deck turns a guess into
+    # a fact for the words we know about.
+    known = [
+        row["arabic"]
+        for row in (
+            client.table("vocab_items")
+            .select("arabic")
+            .order("first_seen_at", desc=True)
+            .limit(300)
+            .execute()
+            .data
+            or []
+        )
+    ]
+
     call = call_skill(
         "extract-vocab-from-chunk",
         json.dumps(
-            {"passage": retrieval.text, "learner_level": level}, ensure_ascii=False
+            {
+                "passage": retrieval.text,
+                "learner_level": level,
+                "already_known": known,
+            },
+            ensure_ascii=False,
         ),
     )
     record_call(client, call, user.id)

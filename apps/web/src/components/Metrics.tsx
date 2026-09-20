@@ -144,10 +144,50 @@ export function Metrics() {
         </section>
       )}
 
+      {/* Spec §2.5: total known, retention rate, words due for review. */}
+      {data.vocab.total > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-[var(--text-muted)]">Vocabulary</h2>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <Small label="Collected" value={String(data.vocab.total)} />
+            <Small label="Known" value={String(data.vocab.known)} />
+            <Small label="In the deck" value={String(data.vocab.due_now)} />
+            <Small
+              label="Retention"
+              value={
+                data.vocab.retention_rate != null
+                  ? `${Math.round(data.vocab.retention_rate * 100)}%`
+                  : "—"
+              }
+            />
+          </div>
+
+          {data.vocab.total_reviews > 0 && (
+            <p className="text-xs text-[var(--text-subtle)]">
+              Retention is successful reviews as a share of all{" "}
+              {data.vocab.total_reviews} — whether the words are sticking, not how
+              many were collected.
+            </p>
+          )}
+
+          {data.vocab.by_resource.length > 0 && (
+            <Card className="divide-y divide-[var(--border-soft)]">
+              {data.vocab.by_resource.map((r) => (
+                <div key={r.title} className="flex items-center justify-between p-4">
+                  <p className="arabic bidi-isolate truncate text-base" dir="rtl" lang="ar">
+                    {r.title}
+                  </p>
+                  <Badge>{r.count} words</Badge>
+                </div>
+              ))}
+            </Card>
+          )}
+        </section>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-[var(--text-muted)]">Totals</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Small label="Vocabulary" value={String(data.vocab_total)} />
+        <div className="grid gap-4 sm:grid-cols-2">
           <Small
             label="Mean understanding"
             value={

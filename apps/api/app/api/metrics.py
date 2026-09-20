@@ -45,6 +45,22 @@ class WeakSpot(BaseModel):
     severity_mix: dict[str, int]
 
 
+class VocabStats(BaseModel):
+    """Spec §2.5: total known, retention rate, words due for review."""
+
+    total: int
+    # Cards resting or retired — you marked them known and they have not come
+    # back around yet.
+    known: int
+    due_now: int
+    retired: int
+    # Successful reviews as a share of all reviews. The honest measure of
+    # whether the words are sticking, rather than how many were collected.
+    retention_rate: float | None
+    total_reviews: int
+    by_resource: list[dict]
+
+
 class Overview(BaseModel):
     attempts_total: int
     attempts_7d: int
@@ -55,6 +71,7 @@ class Overview(BaseModel):
     weak_spots: list[WeakSpot]
     activity: list[dict]
     vocab_total: int
+    vocab: VocabStats
     cost_usd_total: float
 
 
@@ -188,7 +205,55 @@ def overview(user: AuthenticatedUser = Depends(current_user)) -> Overview:
         for i in range(13, -1, -1)
     ]
 
-    vocab = client.table("vocab_items").select("id").execute()
+    vocab_rows = (
+        client.table("vocab_items").select("id, resource_id").execute()
+    ).data or []
+
+    queue = (
+        client.table("review_queue")
+        .select("id, kind, due_at, retired_at, reps, lapses")
+        .execute()
+    ).data or []
+    vocab_cards = [q for q in queue if q["kind"] == "vocab"]
+
+    now_iso = now.isoformat()
+    due_cards = [
+        c for c in vocab_cards if not c.get("retired_at") and c["due_at"] <= now_iso
+    ]
+    resting = [
+        c for c in vocab_cards if not c.get("retired_at") and c["due_at"] > now_iso
+    ]
+    retired_cards = [c for c in vocab_cards if c.get("retired_at")]
+
+    total_reviews = sum(c["reps"] for c in vocab_cards)
+    total_lapses = sum(c["lapses"] for c in vocab_cards)
+
+    # Titles for the per-resource breakdown, so the UI need not join.
+    resources = (
+        client.table("resources").select("id, title").execute()
+    ).data or []
+    titles = {r["id"]: r["title"] for r in resources}
+    per_resource = Counter(
+        v["resource_id"] for v in vocab_rows if v.get("resource_id")
+    )
+
+    vocab_stats = VocabStats(
+        total=len(vocab_rows),
+        known=len(resting) + len(retired_cards),
+        due_now=len(due_cards),
+        retired=len(retired_cards),
+        retention_rate=(
+            round((total_reviews - total_lapses) / total_reviews, 3)
+            if total_reviews
+            else None
+        ),
+        total_reviews=total_reviews,
+        by_resource=[
+            {"title": titles.get(rid, "Unknown"), "count": n}
+            for rid, n in per_resource.most_common(5)
+        ],
+    )
+
     calls = client.table("model_calls").select("cost_usd").limit(1000).execute()
 
     return Overview(
@@ -208,6 +273,7 @@ def overview(user: AuthenticatedUser = Depends(current_user)) -> Overview:
         estimates=estimates,
         weak_spots=weak_spots,
         activity=activity,
-        vocab_total=len(vocab.data or []),
+        vocab_total=len(vocab_rows),
+        vocab=vocab_stats,
         cost_usd_total=round(sum(float(c["cost_usd"]) for c in (calls.data or [])), 4),
     )

@@ -129,6 +129,7 @@ export interface Overview {
   weak_spots: WeakSpot[];
   activity: { date: string; count: number }[];
   vocab_total: number;
+  vocab: VocabStats;
   cost_usd_total: number;
 }
 
@@ -148,6 +149,36 @@ export interface HarvestResult {
   /** Found, but discarded as damaged by PDF extraction. */
   rejected_damaged: number;
   items: VocabCard[];
+}
+
+export interface DeckCard {
+  id: string;
+  kind: "vocab" | "error_tag";
+  front: string;
+  back: string;
+  hint: string | null;
+  reps: number;
+  lapses: number;
+  due_at: string;
+  resting: boolean;
+}
+
+export interface DeckState {
+  cards: DeckCard[];
+  due_now: number;
+  resting: number;
+  retired: number;
+  total: number;
+}
+
+export interface VocabStats {
+  total: number;
+  known: number;
+  due_now: number;
+  retired: number;
+  retention_rate: number | null;
+  total_reviews: number;
+  by_resource: { title: string; count: number }[];
 }
 
 export interface ReviewCard {
@@ -176,6 +207,14 @@ export interface QueueStats {
 }
 
 export const api = {
+  deck: (includeResting = false) =>
+    request<DeckState>(`/review/deck?include_resting=${includeResting}`),
+
+  resetDeck: () => request<DeckState>("/review/reset", { method: "POST" }),
+
+  resourceFileUrl: (id: string) =>
+    request<{ url: string }>(`/resources/${id}/file`),
+
   reviewDue: (limit = 20) => request<ReviewCard[]>(`/review/due?limit=${limit}`),
 
   reviewStats: () => request<QueueStats>("/review/stats"),

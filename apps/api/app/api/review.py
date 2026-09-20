@@ -57,6 +57,36 @@ class QueueStats(BaseModel):
     retired: int
 
 
+class DeckCard(BaseModel):
+    """One card in the merged vocabulary deck.
+
+    Vocabulary and review are the same deck, not two modes. A word you mark
+    known leaves the deck immediately — Quizlet behaviour — while FSRS keeps
+    scheduling it underneath, so it quietly returns weeks later rather than
+    being gone forever. That is the part that actually builds retention, and
+    it costs the learner no extra interaction.
+    """
+
+    id: str
+    kind: str
+    front: str
+    back: str
+    hint: str | None = None
+    reps: int
+    lapses: int
+    due_at: str
+    # True when the card is not currently due — known, and resting.
+    resting: bool
+
+
+class DeckState(BaseModel):
+    cards: list[DeckCard]
+    due_now: int
+    resting: int
+    retired: int
+    total: int
+
+
 @router.get("/due", response_model=list[ReviewCard])
 def due(
     limit: int = 20, user: AuthenticatedUser = Depends(current_user)
@@ -95,6 +125,77 @@ def stats(user: AuthenticatedUser = Depends(current_user)) -> QueueStats:
         total_active=len(active),
         retired=len(retired),
     )
+
+
+@router.get("/deck", response_model=DeckState)
+def deck(
+    include_resting: bool = False,
+    limit: int = 100,
+    user: AuthenticatedUser = Depends(current_user),
+) -> DeckState:
+    """The whole deck.
+
+    By default this returns only cards that are due — the ones you have not
+    marked known, or that have come back around. `include_resting` shows
+    everything, which is what the deck's reset view needs.
+    """
+    client = user_client(user.token)
+    now = datetime.now(timezone.utc).isoformat()
+
+    rows = (
+        client.table("review_queue")
+        .select("id, kind, front, back, hint, reps, lapses, due_at, retired_at")
+        .order("due_at")
+        .limit(min(limit, 500))
+        .execute()
+    ).data or []
+
+    active = [r for r in rows if not r.get("retired_at")]
+    due = [r for r in active if r["due_at"] <= now]
+    resting = [r for r in active if r["due_at"] > now]
+
+    shown = active if include_resting else due
+
+    return DeckState(
+        cards=[
+            DeckCard(
+                id=r["id"], kind=r["kind"], front=r["front"], back=r["back"],
+                hint=r.get("hint"), reps=r["reps"], lapses=r["lapses"],
+                due_at=r["due_at"], resting=r["due_at"] > now,
+            )
+            for r in shown
+        ],
+        due_now=len(due),
+        resting=len(resting),
+        retired=sum(1 for r in rows if r.get("retired_at")),
+        total=len(rows),
+    )
+
+
+@router.post("/reset", response_model=DeckState)
+def reset_deck(user: AuthenticatedUser = Depends(current_user)) -> DeckState:
+    """Bring every card back into the deck.
+
+    Clears the schedule and un-retires everything, so the deck is whole again.
+    FSRS history (reps, lapses) is kept: it is a record of how the learning
+    actually went, and discarding it would make the next round schedule as if
+    the learner had never seen these words.
+    """
+    client = user_client(user.token)
+    now = datetime.now(timezone.utc)
+
+    state, due = new_card(now)
+    client.table("review_queue").update(
+        {
+            "due_at": due.isoformat(),
+            "fsrs_state": state,
+            "retired_at": None,
+            "retired_reason": None,
+        }
+    ).eq("user_id", user.id).execute()
+
+    log.info("deck_reset", user_id=user.id)
+    return deck(include_resting=False, user=user)
 
 
 @router.post("/grade", response_model=ReviewResult)

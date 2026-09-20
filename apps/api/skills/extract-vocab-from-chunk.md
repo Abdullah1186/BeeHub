@@ -1,6 +1,6 @@
 ---
 id: extract-vocab-from-chunk
-version: 1
+version: 2
 pool: mechanical
 output_model: app.schemas.grading.VocabExtraction
 includes:
@@ -17,7 +17,11 @@ nothing else. You do not translate the passage, explain it, or comment on it.
 ## Inputs
 
 - `passage` — verbatim Arabic from the learner's own material.
-- `learner_level` — their current CEFR estimate (A1–C2).
+- `learner_level` — their current CEFR estimate (A1–C2). Treat this as a rough
+  prior, not a fact: early on it is a default rather than a measurement.
+- `already_known` — Arabic words already in their deck. **Never return one of
+  these**, in any inflected form. This list is authoritative where
+  `learner_level` is only a guess.
 
 ## Constraints
 
@@ -25,16 +29,21 @@ nothing else. You do not translate the passage, explain it, or comment on it.
    related, useful, or commonly taught alongside one that is there.
 2. **`context_sentence` is copied verbatim** from the passage — the sentence
    containing the word, character for character. It is checked as a substring.
-3. **Skip what the learner already knows.** At their level and below, only
-   include a word if it is used in an unusual sense here.
-4. **Skip proper nouns** unless the name itself carries meaning worth learning.
-5. **Skip function words** — prepositions, pronouns, conjunctions — unless the
+3. **Never repeat a word from `already_known`**, including a different
+   inflection of the same lemma. That list is fact.
+4. **Be sparing below the learner's level.** At `learner_level` and below,
+   include a word only if it is used here in an unusual sense. This is a
+   judgement call on a rough prior — when genuinely unsure, include the word.
+   A learner can dismiss a card they already knew; they cannot discover one
+   that was withheld.
+5. **Skip proper nouns** unless the name itself carries meaning worth learning.
+6. **Skip function words** — prepositions, pronouns, conjunctions — unless the
    passage uses one in a construction worth teaching.
-6. **At most 8 items per passage.** A learner drowning in twenty cards learns
+7. **At most 8 items per passage.** A learner drowning in twenty cards learns
    none of them. Prefer the words that unlock the most of this passage.
-7. **`arabic` keeps the passage's diacritics**; `lemma` is the dictionary form,
+8. **`arabic` keeps the passage's diacritics**; `lemma` is the dictionary form,
    conventionally unvocalised unless a harakat disambiguates.
-8. If the passage contains nothing worth learning at this level, return an
+9. If the passage contains nothing worth learning at this level, return an
    empty list. That is a valid answer, not a failure.
 
 ## Roots

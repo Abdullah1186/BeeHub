@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
 import { Practice } from "./Practice";
-import { Review } from "./Review";
+import { Deck } from "./Deck";
 import { Vocab } from "./Vocab";
 
 /** Spec §2.3 — the learning tab. Pick a resource, pick a mode.
@@ -11,7 +11,7 @@ import { Vocab } from "./Vocab";
  *  the shape of the product is visible and the spec's §2.3 table is legible in
  *  the UI rather than only in the document. */
 
-type Mode = "questions" | "vocab" | "review" | "essays" | "speaking" | "photo";
+type Mode = "questions" | "harvest" | "deck" | "essays" | "speaking" | "photo";
 
 const MODES: {
   id: Mode;
@@ -29,15 +29,15 @@ const MODES: {
     ready: true,
   },
   {
-    id: "vocab",
-    label: "Vocabulary",
-    blurb: "Flashcards built from the words in your own books.",
+    id: "harvest",
+    label: "Collect words",
+    blurb: "Pull new vocabulary out of a passage you have read.",
     ready: true,
   },
   {
-    id: "review",
-    label: "Review",
-    blurb: "Spaced repetition over what you got wrong. Needs no material.",
+    id: "deck",
+    label: "Flashcards",
+    blurb: "Your whole deck. Know a card and it leaves; the rest stay.",
     ready: true,
     standalone: true,
   },
@@ -116,11 +116,11 @@ export function Learning({
   }
 
   // Practising.
-  if (mode === "review") {
-    return <Review onBack={() => setMode(null)} />;
+  if (mode === "deck") {
+    return <Deck onBack={() => setMode(null)} />;
   }
 
-  if (selected && mode === "vocab") {
+  if (selected && mode === "harvest") {
     return (
       <Vocab
         resourceId={selected}
