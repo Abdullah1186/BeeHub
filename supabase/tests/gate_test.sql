@@ -207,4 +207,33 @@ begin
   raise notice 'PASS serve-time gate withholds out-of-range items';
 end $$;
 
+-- --- 8. deleting a resource -----------------------------------------------
+-- Chunks, generated items and jobs go with the resource; attempts and
+-- vocabulary survive with resource_id set to null, because they are the
+-- learner's record of work done rather than part of the book.
+
+do $$
+declare v_chunks int; v_items int; v_attempts int;
+begin
+  insert into attempts (user_id, resource_id, mode, item_type, prompt_text,
+                        user_answer, difficulty_cefr)
+  values ('11111111-1111-1111-1111-111111111111',
+          'aaaaaaaa-0000-0000-0000-000000000001',
+          'questions', 'short_answer', 'q', 'a', 'A2');
+
+  delete from resources where id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+  select count(*) into v_chunks from resource_chunks
+   where resource_id = 'aaaaaaaa-0000-0000-0000-000000000001';
+  select count(*) into v_items from generated_items
+   where resource_id = 'aaaaaaaa-0000-0000-0000-000000000001';
+  select count(*) into v_attempts from attempts
+   where user_id = '11111111-1111-1111-1111-111111111111';
+
+  assert v_chunks = 0, format('chunks should cascade, %s remain', v_chunks);
+  assert v_items = 0, format('generated items should cascade, %s remain', v_items);
+  assert v_attempts > 0, 'attempts must SURVIVE a resource delete';
+  raise notice 'PASS delete cascades chunks but keeps history';
+end $$;
+
 rollback;

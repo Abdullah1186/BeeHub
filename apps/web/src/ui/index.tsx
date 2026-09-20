@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from "react";
 
 /* Shared primitives. Everything here reads from the CSS custom properties in
@@ -279,6 +280,61 @@ export function ScoreRing({
         </span>
       </div>
       <span className="text-xs text-[var(--text-muted)]">{label}</span>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------- Confirm
+
+/** A destructive action that asks first, inline.
+ *
+ *  Inline rather than a modal: deleting one row in a list is a small decision,
+ *  and a dialog that steals focus is heavier than the action deserves. The
+ *  confirm state names the consequence, because "Delete" alone does not say
+ *  what survives. */
+export function ConfirmButton({
+  onConfirm,
+  label = "Delete",
+  confirmLabel = "Confirm",
+  question,
+  busy,
+}: {
+  onConfirm: () => void;
+  label?: string;
+  confirmLabel?: string;
+  question?: string;
+  busy?: boolean;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  // Disarm after a few seconds, so a stray click does not leave a live
+  // delete button sitting under the cursor.
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 5000);
+    return () => clearTimeout(timer);
+  }, [armed]);
+
+  if (!armed) {
+    return (
+      <Button variant="ghost" size="sm" onClick={() => setArmed(true)}>
+        {label}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {question && (
+        <span className="text-xs text-[var(--text-muted)]">{question}</span>
+      )}
+      <Button variant="danger" size="sm" loading={busy} onClick={onConfirm}>
+        {confirmLabel}
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => setArmed(false)}>
+        Cancel
+      </Button>
     </div>
   );
 }

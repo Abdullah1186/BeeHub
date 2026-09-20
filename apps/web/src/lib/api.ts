@@ -172,6 +172,9 @@ export const api = {
     return request<Resource>("/resources/upload", { method: "POST", body: form });
   },
 
+  deleteResource: (id: string) =>
+    request<void>(`/resources/${id}`, { method: "DELETE" }),
+
   updatePosition: (id: string, positionValue: number) =>
     request<Resource>(`/resources/${id}/position`, {
       method: "PATCH",

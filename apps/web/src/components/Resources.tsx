@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type Resource } from "../lib/api";
-import { Badge, Button, Card, EmptyState, Input, Progress, SkeletonCard } from "../ui";
+import { Badge, Button, Card, ConfirmButton, EmptyState, Input, Progress, SkeletonCard } from "../ui";
 
 /** Spec §2.2 — the library. Upload, register, position tracking, per-resource
  *  status. Practice itself lives in the Learning tab. */
@@ -104,6 +104,7 @@ function ResourceRow({
 }) {
   const [position, setPosition] = useState(resource.position_value ?? 1);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const status = STATUS[resource.ingest_status] ?? STATUS.pending;
   const usable = resource.ingest_status === "ok" || resource.ingest_status === "degraded";
   const inFlight = resource.ingest_status === "pending" || resource.ingest_status === "extracting";
@@ -120,6 +121,16 @@ function ResourceRow({
       onChange();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function remove() {
+    setDeleting(true);
+    try {
+      await api.deleteResource(resource.id);
+      onChange();
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -195,11 +206,30 @@ function ResourceRow({
             </label>
             {saving && <span className="text-xs text-[var(--text-subtle)]">saving…</span>}
 
-            <Button size="sm" className="ml-auto" onClick={() => onPractice(resource.id)}>
-              Practise
-            </Button>
+            <div className="ml-auto flex items-center gap-1">
+              <ConfirmButton
+                onConfirm={remove}
+                busy={deleting}
+                question="Delete this? Your answers and vocabulary are kept."
+              />
+              <Button size="sm" onClick={() => onPractice(resource.id)}>
+                Practise
+              </Button>
+            </div>
           </div>
         </>
+      )}
+
+      {/* Unusable or still-queued resources have no Practise row, so delete
+          gets its own — otherwise a failed upload could never be removed. */}
+      {!usable && (
+        <div className="mt-4 flex justify-end">
+          <ConfirmButton
+            onConfirm={remove}
+            busy={deleting}
+            question="Delete this?"
+          />
+        </div>
       )}
     </Card>
   );

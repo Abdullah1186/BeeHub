@@ -153,3 +153,24 @@ def test_openapi_schema_builds():
     schema = client.get("/openapi.json").json()
     for path in ("/health", "/me", "/resources", "/resources/upload"):
         assert path in schema["paths"]
+
+
+# --- delete ---------------------------------------------------------------
+
+
+def test_delete_requires_auth():
+    response = client.delete("/resources/00000000-0000-0000-0000-000000000001")
+    assert response.status_code == 401
+
+
+def test_delete_is_registered():
+    """A missing route would 405 rather than 401, so this pins the method."""
+    schema = client.get("/openapi.json").json()
+    assert "delete" in schema["paths"]["/resources/{resource_id}"]
+
+
+def test_delete_returns_204_on_success_shape():
+    """The contract is 204 No Content — a body here would break the client."""
+    schema = client.get("/openapi.json").json()
+    responses = schema["paths"]["/resources/{resource_id}"]["delete"]["responses"]
+    assert "204" in responses

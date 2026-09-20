@@ -206,6 +206,56 @@ def get_resource(
     return ResourceOut(**result.data[0])
 
 
+@router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_resource(
+    resource_id: str, user: AuthenticatedUser = Depends(current_user)
+) -> None:
+    """Delete a resource and everything derived from it.
+
+    Chunks, generated questions and ingestion jobs go with it via ON DELETE
+    CASCADE. Attempts and vocabulary survive: they are the learner's own record
+    of work done, and `resource_id` is ON DELETE SET NULL on both, so history
+    stays intact after the book is gone.
+
+    The stored PDF is removed too — leaving orphaned files in the bucket costs
+    money and leaks content that the user asked to be rid of.
+    """
+    settings = get_settings()
+    client = user_client(user.token)
+
+    existing = (
+        client.table("resources")
+        .select("id, storage_path")
+        .eq("id", resource_id)
+        .execute()
+    )
+    if not existing.data:
+        # RLS already hides other users' rows, so "not found" is also the right
+        # answer for "not yours" — and leaks neither.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+
+    storage_path = existing.data[0].get("storage_path")
+
+    # Delete the row first: the row is what the app reads, so if the storage
+    # removal fails we are left with an unreferenced file rather than a
+    # resource pointing at a file that is gone.
+    client.table("resources").delete().eq("id", resource_id).execute()
+
+    if storage_path:
+        try:
+            client.storage.from_(settings.storage_bucket).remove([storage_path])
+        except Exception as exc:  # noqa: BLE001
+            log.error(
+                "storage_delete_failed",
+                resource_id=resource_id,
+                path=storage_path,
+                error=str(exc),
+                hint="row is deleted; this file is now orphaned in the bucket",
+            )
+
+    log.info("resource_deleted", resource_id=resource_id)
+
+
 @router.patch("/{resource_id}/position", response_model=ResourceOut)
 def update_position(
     resource_id: str,
