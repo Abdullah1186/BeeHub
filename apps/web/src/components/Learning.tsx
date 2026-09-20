@@ -84,6 +84,7 @@ export function Learning({
   const usable = resources.filter(
     (r) => r.ingest_status === "ok" || r.ingest_status === "degraded",
   );
+  const selectedTitle = usable.find((r) => r.id === selected)?.title ?? null;
 
   if (loading) {
     return (
@@ -127,26 +128,58 @@ export function Learning({
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Material</h2>
+        <h2 className="text-sm font-medium text-[var(--text-muted)]">
+          1 · Material {selectedTitle && <span className="text-[var(--accent-text)]">✓</span>}
+        </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {usable.map((r) => (
-            <button key={r.id} onClick={() => setSelected(r.id)} className="text-left">
+            <button
+              key={r.id}
+              onClick={() => setSelected(r.id)}
+              aria-pressed={selected === r.id}
+              className="text-left"
+            >
+              {/* Selection needs to survive a glance: a ring, a filled tick and
+                  a word, not a background tint alone. Colour by itself is also
+                  the one cue some users cannot see. */}
               <Card
                 interactive
-                className={`p-4 transition-colors ${
-                  selected === r.id ? "border-[var(--accent)] bg-[var(--accent-soft)]" : ""
+                className={`relative p-4 transition-all ${
+                  selected === r.id
+                    ? "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg)]"
+                    : "hover:border-[var(--accent)]/40"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="arabic bidi-isolate truncate text-lg" dir="rtl" lang="ar">
                     {r.title}
                   </h3>
-                  {r.ingest_status === "degraded" && <Badge tone="warn">issues</Badge>}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {r.ingest_status === "degraded" && <Badge tone="warn">issues</Badge>}
+                    {selected === r.id ? (
+                      <span
+                        className="flex h-5 w-5 items-center justify-center rounded-full
+                                   bg-[var(--accent)] text-[var(--accent-fg)]"
+                        aria-hidden="true"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="3"
+                                strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    ) : (
+                      <span className="h-5 w-5 rounded-full border-2 border-[var(--border)]"
+                            aria-hidden="true" />
+                    )}
+                  </div>
                 </div>
                 {r.total_length && (
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     page {r.position_value ?? 0} of {r.total_length}
                   </p>
+                )}
+                {selected === r.id && (
+                  <p className="mt-2 text-xs font-medium text-[var(--accent-text)]">Selected</p>
                 )}
               </Card>
             </button>
@@ -155,7 +188,17 @@ export function Learning({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Mode</h2>
+        <h2 className="text-sm font-medium text-[var(--text-muted)]">
+          2 · Mode
+          {selectedTitle && (
+            <>
+              {" · "}
+              <span className="arabic bidi-isolate text-[var(--accent-text)]" dir="rtl" lang="ar">
+                {selectedTitle}
+              </span>
+            </>
+          )}
+        </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {MODES.map((m) => (
             <Card
