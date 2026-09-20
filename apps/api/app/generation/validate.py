@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.schemas.grading import ComprehensionQuestion
+from app.schemas.grading import ComprehensionQuestion, TrueFalseSet
 
 log = structlog.get_logger()
 
@@ -101,3 +101,44 @@ def validate_or_none(
         return question
     log.warning("generated_item_rejected", reasons=result.reasons)
     return None
+
+
+def validate_true_false(
+    result: TrueFalseSet,
+    passage: str,
+    allowed_chunk_ids: set[str],
+) -> ValidationResult:
+    """Same grounding rule as questions, applied per statement.
+
+    A false statement's quote is the text it CONTRADICTS, so it must still
+    appear verbatim — that is what proves the statement is false about this
+    passage rather than merely absent from it.
+    """
+    reasons: list[str] = []
+
+    if not result.answerable_from_source:
+        if result.statements:
+            reasons.append("declared unanswerable but still returned statements")
+        return ValidationResult(not reasons, reasons)
+
+    if not result.statements:
+        reasons.append("no statements")
+
+    cited = set(result.source_chunk_ids)
+    if not cited <= allowed_chunk_ids:
+        reasons.append(f"cites chunks outside the retrieval set: {sorted(cited - allowed_chunk_ids)}")
+
+    canonical_passage = _canonical(passage)
+    for statement in result.statements:
+        if not statement.statement_arabic.strip():
+            reasons.append(f"{statement.id}: empty statement")
+        quote = _canonical(statement.source_quote)
+        if not quote:
+            reasons.append(f"{statement.id}: empty source_quote")
+        elif quote not in canonical_passage:
+            reasons.append(
+                f"{statement.id}: source_quote is not verbatim in the passage "
+                f"({statement.source_quote[:40]!r})"
+            )
+
+    return ValidationResult(not reasons, reasons)

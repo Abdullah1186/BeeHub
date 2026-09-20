@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from app.ai.client import call_skill, record_call
 from app.auth import AuthenticatedUser, current_user
 from app.db import user_client
-from app.generation.validate import validate_question
+from app.generation.validate import validate_question, validate_true_false
 from app.grading.score import compute_score
 from app.retrieval.selector import select_window
 from app.schemas.grading import ShortAnswerGrade
@@ -321,6 +321,216 @@ def submit_answer(
             for t in grade.language_errors
         ],
         feedback=grade.holistic_note,
+    )
+
+
+class TFStatementOut(BaseModel):
+    id: str
+    statement_arabic: str
+    statement_english: str
+
+
+class TrueFalseOut(BaseModel):
+    item_id: str
+    resource_id: str
+    difficulty_cefr: str
+    statements: list[TFStatementOut]
+
+
+class TFAnswer(BaseModel):
+    item_id: str
+    # statement id -> the learner's verdict
+    answers: dict[str, bool]
+
+
+class TFVerdict(BaseModel):
+    id: str
+    statement_arabic: str
+    correct: bool
+    correct_answer: bool
+    explanation: str
+    source_quote: str
+
+
+class TFResult(BaseModel):
+    score: float
+    correct_count: int
+    total: int
+    verdicts: list[TFVerdict]
+
+
+@router.get("/true-false", response_model=TrueFalseOut)
+def next_true_false(
+    resource_id: str, user: AuthenticatedUser = Depends(current_user)
+) -> TrueFalseOut:
+    """Serve a true/false set, generating one if the bank has nothing unseen."""
+    client = user_client(user.token)
+
+    cached = (
+        client.rpc("next_practice_item", {"p_user_id": user.id, "p_resource_id": resource_id})
+        .execute()
+    ).data
+    cached_tf = [c for c in (cached or []) if c["item_type"] == "true_false"]
+    if cached_tf:
+        item = cached_tf[0]
+        payload = item["payload"]
+        return TrueFalseOut(
+            item_id=item["id"],
+            resource_id=item["resource_id"],
+            difficulty_cefr=item["difficulty_cefr"],
+            statements=[
+                TFStatementOut(
+                    id=s["id"],
+                    statement_arabic=s["statement_arabic"],
+                    statement_english=s["statement_english"],
+                )
+                for s in payload.get("statements", [])
+            ],
+        )
+
+    retrieval = select_window(client, resource_id, user.id)
+    if retrieval.is_empty:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "no material available to practise from. Either this resource has not "
+                "finished processing, or your reading position is at the very beginning."
+            ),
+        )
+
+    level = _current_level(client, user.id)
+    call = call_skill(
+        "generate-true-false",
+        json.dumps(
+            {
+                "passage": retrieval.text,
+                "chunk_ids": sorted(retrieval.chunk_ids),
+                "target_cefr": level,
+            },
+            ensure_ascii=False,
+        ),
+    )
+    call_id = record_call(client, call, user.id)
+
+    if call.status != "ok":
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="could not generate statements; please try again",
+        )
+
+    result = call.parsed
+    verdict = validate_true_false(result, retrieval.text, retrieval.chunk_ids)
+    if not verdict.ok:
+        log.warning("true_false_rejected", reasons=verdict.reasons)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="could not produce statements grounded in this passage",
+        )
+    if not result.answerable_from_source:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="this passage does not support true/false statements.",
+        )
+
+    row = (
+        client.table("generated_items")
+        .insert(
+            {
+                "user_id": user.id,
+                "resource_id": resource_id,
+                "item_type": "true_false",
+                "payload": result.model_dump(mode="json"),
+                "source_chunk_ids": sorted(retrieval.chunk_ids),
+                "max_page": retrieval.max_page,
+                "difficulty_cefr": result.difficulty_cefr,
+                "model_call_id": call_id,
+            }
+        )
+        .execute()
+    )
+
+    return TrueFalseOut(
+        item_id=row.data[0]["id"],
+        resource_id=resource_id,
+        difficulty_cefr=result.difficulty_cefr,
+        statements=[
+            TFStatementOut(
+                id=s.id,
+                statement_arabic=s.statement_arabic,
+                statement_english=s.statement_english,
+            )
+            for s in result.statements
+        ],
+    )
+
+
+@router.post("/true-false/answer", response_model=TFResult)
+def answer_true_false(
+    body: TFAnswer, user: AuthenticatedUser = Depends(current_user)
+) -> TFResult:
+    """Mark a true/false set.
+
+    No model call: the answers were decided at generation time and stored with
+    their evidence. Grading is a comparison, and paying a model to compare two
+    booleans would be absurd.
+    """
+    client = user_client(user.token)
+
+    items = client.table("generated_items").select("*").eq("id", body.item_id).execute()
+    if not items.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown item")
+    item = items.data[0]
+    statements = item["payload"].get("statements", [])
+
+    verdicts: list[TFVerdict] = []
+    correct_count = 0
+    for s in statements:
+        given = body.answers.get(s["id"])
+        is_correct = given is not None and given == s["is_true"]
+        correct_count += int(is_correct)
+        verdicts.append(
+            TFVerdict(
+                id=s["id"],
+                statement_arabic=s["statement_arabic"],
+                correct=is_correct,
+                correct_answer=s["is_true"],
+                explanation=s["explanation"],
+                source_quote=s["source_quote"],
+            )
+        )
+
+    total = len(statements) or 1
+    score = correct_count / total
+
+    client.table("attempts").insert(
+        {
+            "user_id": user.id,
+            "resource_id": item["resource_id"],
+            "generated_item_id": item["id"],
+            "mode": "questions",
+            "item_type": "true_false",
+            "prompt_text": " · ".join(s["statement_arabic"] for s in statements)[:2000],
+            "user_answer": json.dumps(body.answers, ensure_ascii=False),
+            "input_method": "typed",
+            # True/false tests comprehension only — there is no written Arabic
+            # to judge, so language_score stays null rather than being invented.
+            "content_score": round(score, 3),
+            "score": round(score, 3),
+            "difficulty_cefr": item["difficulty_cefr"],
+            "grade_payload": {"correct": correct_count, "total": len(statements)},
+            "gradable": True,
+        }
+    ).execute()
+
+    client.table("generated_items").update({"consumed_at": "now()"}).eq(
+        "id", item["id"]
+    ).execute()
+
+    return TFResult(
+        score=round(score, 2),
+        correct_count=correct_count,
+        total=len(statements),
+        verdicts=verdicts,
     )
 
 

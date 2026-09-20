@@ -42,6 +42,9 @@ tasks:
   # mid-string. These are sized with headroom; output is billed on what is
   # actually produced, so a generous ceiling costs nothing when unused.
   generate-comprehension-questions: {pool: judgment,   max_tokens: 16000, batch: true}
+  # §5.3 routes true/false to Sonnet because plausible distractors need
+  # genuine understanding of the text, not pattern matching.
+  generate-true-false:              {pool: judgment,   max_tokens: 16000, batch: true}
   grade-short-answer:               {pool: judgment,   max_tokens: 16000}
   tag-grammar-errors:               {pool: judgment,   max_tokens: 12000}
   estimate-cefr-level:              {pool: judgment,   max_tokens: 8000, batch: true}

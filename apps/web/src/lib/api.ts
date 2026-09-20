@@ -316,6 +316,32 @@ export const api = {
       body: JSON.stringify({ position_value: positionValue }),
     }),
 
+  trueFalse: (resourceId: string) =>
+    request<{
+      item_id: string;
+      resource_id: string;
+      difficulty_cefr: string;
+      statements: { id: string; statement_arabic: string; statement_english: string }[];
+    }>(`/learning/true-false?resource_id=${resourceId}`),
+
+  answerTrueFalse: (itemId: string, answers: Record<string, boolean>) =>
+    request<{
+      score: number;
+      correct_count: number;
+      total: number;
+      verdicts: {
+        id: string;
+        statement_arabic: string;
+        correct: boolean;
+        correct_answer: boolean;
+        explanation: string;
+        source_quote: string;
+      }[];
+    }>("/learning/true-false/answer", {
+      method: "POST",
+      body: JSON.stringify({ item_id: itemId, answers }),
+    }),
+
   nextQuestion: (resourceId?: string) =>
     request<Question>(
       `/learning/next${resourceId ? `?resource_id=${resourceId}` : ""}`,

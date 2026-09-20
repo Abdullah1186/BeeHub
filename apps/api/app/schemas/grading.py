@@ -75,6 +75,51 @@ class ComprehensionQuestion(BaseModel):
         return self
 
 
+class TrueFalseStatement(BaseModel):
+    """One statement about the passage, with its verdict and evidence."""
+
+    id: str = Field(description="Stable identifier, e.g. 's1'.")
+    statement_arabic: str = Field(description="The claim, in MSA.")
+    statement_english: str = Field(description="Faithful gloss.")
+    is_true: bool = Field(
+        description="Whether the PASSAGE supports it — not whether it is true of the world."
+    )
+    source_quote: str = Field(
+        description=(
+            "VERBATIM Arabic from the passage that settles it. For a false "
+            "statement, the text it contradicts."
+        )
+    )
+    explanation: str = Field(
+        max_length=300, description="One sentence in English, shown after answering."
+    )
+
+
+class TrueFalseSet(BaseModel):
+    """Output of generate-true-false. A set, because one T/F item is a coin flip."""
+
+    statements: list[TrueFalseStatement] = Field(
+        default_factory=list,
+        max_length=6,
+        description="3-5 statements. Empty when the passage cannot support any.",
+    )
+    source_chunk_ids: list[str] = Field(min_length=1)
+    difficulty_cefr: CEFRLevel
+    answerable_from_source: bool
+
+    @model_validator(mode="after")
+    def answerable_implies_statements(self) -> TrueFalseSet:
+        if self.answerable_from_source and not self.statements:
+            raise ValueError("answerable_from_source is True but no statements were given")
+        # A set that is all-true or all-false teaches the learner to guess one
+        # way rather than to read. The prompt asks for a mix; this enforces it.
+        if self.answerable_from_source and len(self.statements) > 2:
+            verdicts = {s.is_true for s in self.statements}
+            if len(verdicts) == 1:
+                raise ValueError("a true/false set must contain both true and false statements")
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Grading
 # ---------------------------------------------------------------------------

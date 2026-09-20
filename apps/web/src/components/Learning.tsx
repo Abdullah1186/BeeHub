@@ -3,6 +3,7 @@ import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
 import { Deck } from "./Deck";
 import { Practice } from "./Practice";
+import { TrueFalse } from "./TrueFalse";
 import { Vocab } from "./Vocab";
 import { VocabTable } from "./VocabTable";
 import { WordPicker } from "./WordPicker";
@@ -37,6 +38,10 @@ const MODES: Mode[] = [
     blurb: "Comprehension questions from the pages you have read.",
     ready: true,
     needsResource: true,
+    tabs: [
+      { id: "short", label: "Short answer" },
+      { id: "truefalse", label: "True / false" },
+    ],
   },
   {
     id: "words",
@@ -263,7 +268,11 @@ function Content({
   resourceId: string | null;
 }) {
   if (mode === "questions" && resourceId) {
-    return <Practice resourceId={resourceId} onBack={() => {}} hideBack />;
+    return tab === "truefalse" ? (
+      <TrueFalse resourceId={resourceId} />
+    ) : (
+      <Practice resourceId={resourceId} onBack={() => {}} hideBack />
+    );
   }
   if (mode === "words" && resourceId) {
     return tab === "manual" ? (
