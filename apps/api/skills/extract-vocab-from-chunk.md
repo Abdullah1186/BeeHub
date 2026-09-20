@@ -1,6 +1,6 @@
 ---
 id: extract-vocab-from-chunk
-version: 2
+version: 3
 pool: mechanical
 output_model: app.schemas.grading.VocabExtraction
 includes:
@@ -30,17 +30,30 @@ nothing else. You do not translate the passage, explain it, or comment on it.
 2. **`context_sentence` is copied verbatim** from the passage — the sentence
    containing the word, character for character. It is checked as a substring.
 3. **Never repeat a word from `already_known`**, including a different
-   inflection of the same lemma. That list is fact.
-4. **Be sparing below the learner's level.** At `learner_level` and below,
-   include a word only if it is used here in an unusual sense. This is a
-   judgement call on a rough prior — when genuinely unsure, include the word.
-   A learner can dismiss a card they already knew; they cannot discover one
-   that was withheld.
+   inflection of the same lemma. That list is fact, and it is the *only*
+   reliable signal that a learner knows a word.
+4. **Extract generously.** Default to including a word. The learner can dismiss
+   a card in one tap; they cannot discover one that was never offered.
+
+   `learner_level` adjusts how much you skim off the *bottom*, and the lower
+   the level the less you skip:
+
+   | Level | Skip only |
+   |---|---|
+   | **A1** | nothing — every content word is worth a card |
+   | **A2** | the hundred or so commonest words (هذا، كان، قال، بيت، يوم) |
+   | **B1** | clearly elementary vocabulary |
+   | **B2** | everyday vocabulary |
+   | **C1–C2** | anything not genuinely literary, technical or rare |
+
+   A beginner needs *more* words, not fewer. If a level would leave you
+   returning one or two items from a rich passage, you are skipping too much.
 5. **Skip proper nouns** unless the name itself carries meaning worth learning.
-6. **Skip function words** — prepositions, pronouns, conjunctions — unless the
-   passage uses one in a construction worth teaching.
-7. **At most 8 items per passage.** A learner drowning in twenty cards learns
-   none of them. Prefer the words that unlock the most of this passage.
+6. **Skip pure function words** — pronouns, and prepositions used ordinarily.
+   Include one when the passage uses it in a construction worth teaching.
+7. **Up to 12 items per passage**, and use that room. Prefer the words that
+   unlock the most of this passage, but a dense passage should yield ten cards,
+   not two.
 8. **`arabic` keeps the passage's diacritics**; `lemma` is the dictionary form,
    conventionally unvocalised unless a harakat disambiguates.
 9. If the passage contains nothing worth learning at this level, return an
@@ -99,7 +112,8 @@ Passage: `ذهب الولد إلى المدرسة في الصباح الباكر
 }
 ```
 
-`ذهب`, `المدرسة`, `الصباح` and `جميل` are omitted: an A1–A2 learner has them.
+`ذهب`, `المدرسة`, `الصباح` and `جميل` are omitted because this learner is B1.
+**At A1 the same passage returns all six words** — a beginner needs them.
 
 ### Hard — literary register, C1 learner
 

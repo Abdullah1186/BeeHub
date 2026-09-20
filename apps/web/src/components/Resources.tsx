@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, ConfirmButton, EmptyState, Input, Progress, SkeletonCard } from "../ui";
+import { PdfCover, PdfViewer } from "./PdfPreview";
 
 /** Spec §2.2 — the library. Upload, register, position tracking, per-resource
  *  status. Practice itself lives in the Learning tab. */
@@ -105,7 +106,7 @@ function ResourceRow({
   const [position, setPosition] = useState(resource.position_value ?? 1);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [openingFile, setOpeningFile] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const status = STATUS[resource.ingest_status] ?? STATUS.pending;
   const usable = resource.ingest_status === "ok" || resource.ingest_status === "degraded";
   const inFlight = resource.ingest_status === "pending" || resource.ingest_status === "extracting";
@@ -135,18 +136,6 @@ function ResourceRow({
     }
   }
 
-  async function openFile() {
-    setOpeningFile(true);
-    try {
-      const { url } = await api.resourceFileUrl(resource.id);
-      // A signed URL expires in an hour, so it is fetched on demand rather
-      // than held in the list.
-      window.open(url, "_blank", "noopener,noreferrer");
-    } finally {
-      setOpeningFile(false);
-    }
-  }
-
   const progress =
     resource.total_length && resource.position_value != null
       ? Math.min(1, resource.position_value / resource.total_length)
@@ -155,7 +144,11 @@ function ResourceRow({
   return (
     <Card className="p-5" interactive={usable}>
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 gap-4">
+          {resource.type === "pdf" && (
+            <PdfCover resourceId={resource.id} onOpen={() => setViewing(true)} />
+          )}
+          <div className="min-w-0">
           <h3 className="arabic bidi-isolate truncate text-xl" dir="rtl" lang="ar">
             {resource.title}
           </h3>
@@ -165,6 +158,7 @@ function ResourceRow({
               {resource.author}
             </p>
           )}
+          </div>
         </div>
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>
@@ -220,14 +214,11 @@ function ResourceRow({
             {saving && <span className="text-xs text-[var(--text-subtle)]">saving…</span>}
 
             <div className="ml-auto flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                loading={openingFile}
-                onClick={openFile}
-              >
-                View PDF
-              </Button>
+              {resource.type === "pdf" && (
+                <Button variant="ghost" size="sm" onClick={() => setViewing(true)}>
+                  Read
+                </Button>
+              )}
               <ConfirmButton
                 onConfirm={remove}
                 busy={deleting}
@@ -245,15 +236,25 @@ function ResourceRow({
           gets its own — otherwise a failed upload could never be removed. */}
       {!usable && (
         <div className="mt-4 flex justify-end gap-1">
-          <Button variant="ghost" size="sm" loading={openingFile} onClick={openFile}>
-            View PDF
-          </Button>
+          {resource.type === "pdf" && (
+            <Button variant="ghost" size="sm" onClick={() => setViewing(true)}>
+              Read
+            </Button>
+          )}
           <ConfirmButton
             onConfirm={remove}
             busy={deleting}
             question="Delete this?"
           />
         </div>
+      )}
+
+      {viewing && (
+        <PdfViewer
+          resourceId={resource.id}
+          title={resource.title}
+          onClose={() => setViewing(false)}
+        />
       )}
     </Card>
   );

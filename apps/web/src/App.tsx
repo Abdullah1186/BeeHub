@@ -6,15 +6,16 @@ import { Home } from "./components/Home";
 import { Learning } from "./components/Learning";
 import { Metrics } from "./components/Metrics";
 import { Resources } from "./components/Resources";
+import { Settings } from "./components/Settings";
 import { Button, Wordmark } from "./ui";
 
-/** The spec's §2 tabs. Settings is Phase 4; Review lives inside Learning
- *  until the spaced-repetition queue exists. */
+/** The spec's §2 tabs. Review lives inside Learning as the flashcard deck. */
 const TABS = [
   { id: "home", label: "Home" },
   { id: "resources", label: "Resources" },
   { id: "learning", label: "Learning" },
   { id: "metrics", label: "Metrics" },
+  { id: "settings", label: "Settings" },
 ] as const;
 
 export type Tab = (typeof TABS)[number]["id"];
@@ -100,6 +101,7 @@ export default function App() {
           <Learning focusResource={focusResource} onBrowse={() => setTab("resources")} />
         )}
         {tab === "metrics" && <Metrics />}
+        {tab === "settings" && <Settings />}
       </main>
     </div>
   );

@@ -325,13 +325,7 @@ def submit_answer(
 
 
 def _current_level(client, user_id: str) -> str:
-    """Latest reading estimate, defaulting to A2 before any data exists."""
-    result = (
-        client.table("level_estimates")
-        .select("cefr_level")
-        .eq("skill", "reading")
-        .order("computed_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-    return result.data[0]["cefr_level"] if result.data else "A2"
+    """The learner's level: stated first, measured second, A2 as a last resort."""
+    from app.api.vocab import _current_level as resolve
+
+    return resolve(client, user_id)

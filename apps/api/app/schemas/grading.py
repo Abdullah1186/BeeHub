@@ -182,4 +182,5 @@ class VocabItem(BaseModel):
 
 
 class VocabExtraction(BaseModel):
+    # 12 to match the skill's cap, with headroom.
     items: list[VocabItem] = Field(default_factory=list, max_length=20)

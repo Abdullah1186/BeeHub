@@ -206,7 +206,21 @@ export interface QueueStats {
   retired: number;
 }
 
+export interface UserSettings {
+  target_level: string | null;
+  daily_goal: number;
+  dialect_pref: string;
+}
+
 export const api = {
+  settings: () => request<UserSettings>("/settings"),
+
+  updateSettings: (patch: Partial<UserSettings>) =>
+    request<UserSettings>("/settings", {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+
   deck: (includeResting = false) =>
     request<DeckState>(`/review/deck?include_resting=${includeResting}`),
 

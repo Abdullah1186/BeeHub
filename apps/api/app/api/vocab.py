@@ -227,12 +227,26 @@ def _is_intact_word(arabic: str, pos: str | None = None) -> bool:
 
 
 def _current_level(client, user_id: str) -> str:
-    result = (
+    """The learner's level, preferring what they told us.
+
+    Order matters. A stated level is a fact about the learner; a measured
+    estimate is inference from a handful of answers. Before §5.7's estimation
+    job exists there is nothing measured at all, which is why this used to
+    return a hardcoded A2 for everyone — and why a self-reported A1 learner
+    was being served B1-filtered vocabulary.
+    """
+    profile = (
+        client.table("profiles").select("target_level").eq("id", user_id).execute()
+    ).data
+    if profile and profile[0].get("target_level"):
+        return profile[0]["target_level"]
+
+    measured = (
         client.table("level_estimates")
         .select("cefr_level")
         .eq("skill", "reading")
         .order("computed_at", desc=True)
         .limit(1)
         .execute()
-    )
-    return result.data[0]["cefr_level"] if result.data else "A2"
+    ).data
+    return measured[0]["cefr_level"] if measured else "A2"
