@@ -1,65 +1,178 @@
 @import "tailwindcss";
 
 /* Arabic typography (spec §7).
-   Noto Naskh Arabic, self-hosted rather than loaded from the Google CDN: the
-   fallback stack for Arabic is poor, so a CDN round trip produces severe layout
-   shift on the text that matters most. */
+   Self-hosted rather than CDN: the Arabic fallback stack is poor enough that a
+   round trip causes severe layout shift on exactly the text that matters. */
 @font-face {
   font-family: "Noto Naskh Arabic";
   src: url("/fonts/NotoNaskhArabic.woff2") format("woff2");
   font-weight: 400 700;
   font-display: swap;
-  /* Arabic, Arabic Supplement, Extended-A, and presentation forms. */
   unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 @theme {
   --font-arabic: "Noto Naskh Arabic", "Geeza Pro", "Al Bayan", serif;
-  --color-bee-50:  #fffbeb;
-  --color-bee-100: #fef3c7;
-  --color-bee-500: #f59e0b;
-  --color-bee-600: #d97706;
-  --color-bee-700: #b45309;
+
+  /* Honey — the identity colour. Warm amber reads as "study" rather than
+     "enterprise dashboard", and stays legible on both grounds. */
+  --color-honey-50:  #fffcf0;
+  --color-honey-100: #fff6d6;
+  --color-honey-200: #ffe9a8;
+  --color-honey-300: #ffd76b;
+  --color-honey-400: #fbc02d;
+  --color-honey-500: #f0a202;
+  --color-honey-600: #d17d00;
+  --color-honey-700: #a85c02;
+  --color-honey-800: #7c4310;
+  --color-honey-900: #5c3212;
+
+  /* Ink — warm neutrals. Pure grey next to amber looks dead. */
+  --color-ink-50:  #faf9f7;
+  --color-ink-100: #f4f2ee;
+  --color-ink-200: #e8e4dd;
+  --color-ink-300: #d5cfc4;
+  --color-ink-400: #a8a094;
+  --color-ink-500: #7d7568;
+  --color-ink-600: #5c554a;
+  --color-ink-700: #423d35;
+  --color-ink-800: #2a2621;
+  --color-ink-900: #1a1714;
+
+  --radius-card: 0.875rem;
 }
 
+/* Theme tokens.
+   Full light palette on bare :root, then dark overrides. Every colour is
+   defined in the light block, so nothing depends on a media query alone. */
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+
+  --bg:          var(--color-ink-50);
+  --surface:     #ffffff;
+  --surface-alt: var(--color-ink-100);
+  --border:      var(--color-ink-200);
+  --border-soft: var(--color-ink-100);
+  --text:        var(--color-ink-900);
+  --text-muted:  var(--color-ink-500);
+  --text-subtle: var(--color-ink-400);
+  --accent:      var(--color-honey-500);
+  --accent-fg:   #ffffff;
+  --accent-soft: var(--color-honey-100);
+  --accent-text: var(--color-honey-700);
+
+  --ok-bg: #e7f6ec;  --ok-text: #14683a;
+  --warn-bg: var(--color-honey-100); --warn-text: var(--color-honey-800);
+  --bad-bg: #fdeaea; --bad-text: #9b1c1c;
+
+  --shadow-sm: 0 1px 2px rgb(26 23 20 / 0.05);
+  --shadow-md: 0 4px 16px -4px rgb(26 23 20 / 0.10);
+
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-body {
-  margin: 0;
-  background: #fafaf9;
-  color: #1c1917;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          var(--color-ink-900);
+    --surface:     #211d19;
+    --surface-alt: var(--color-ink-800);
+    --border:      #3a342c;
+    --border-soft: #2f2a24;
+    --text:        var(--color-ink-100);
+    --text-muted:  var(--color-ink-400);
+    --text-subtle: var(--color-ink-500);
+    --accent:      var(--color-honey-400);
+    --accent-fg:   var(--color-ink-900);
+    --accent-soft: #3d2f12;
+    --accent-text: var(--color-honey-300);
+
+    --ok-bg: #12301f;  --ok-text: #7ee2a8;
+    --warn-bg: #3d2f12; --warn-text: var(--color-honey-300);
+    --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+  }
 }
 
-/* Arabic content.
-   line-height is generous because Arabic diacritics sit above and below the
-   baseline and are clipped at typical Latin leading. */
+:root[data-theme="dark"] {
+  --bg:          var(--color-ink-900);
+  --surface:     #211d19;
+  --surface-alt: var(--color-ink-800);
+  --border:      #3a342c;
+  --border-soft: #2f2a24;
+  --text:        var(--color-ink-100);
+  --text-muted:  var(--color-ink-400);
+  --text-subtle: var(--color-ink-500);
+  --accent:      var(--color-honey-400);
+  --accent-fg:   var(--color-ink-900);
+  --accent-soft: #3d2f12;
+  --accent-text: var(--color-honey-300);
+  --ok-bg: #12301f;  --ok-text: #7ee2a8;
+  --warn-bg: #3d2f12; --warn-text: var(--color-honey-300);
+  --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Arabic content. line-height is generous because harakat sit above AND below
+   the baseline and clip at typical Latin leading. */
 .arabic {
   font-family: var(--font-arabic);
   direction: rtl;
   text-align: right;
-  line-height: 2.1;
-  font-size: 1.25rem;
+  line-height: 2.15;
 }
 
-/* An RTL input inside an LTR page: the caret and placeholder must follow the
-   text direction, not the surrounding layout. */
 .arabic-input {
   font-family: var(--font-arabic);
   direction: rtl;
   text-align: right;
   line-height: 2;
-  font-size: 1.125rem;
 }
 
-/* Isolate a bidirectional run so neighbouring text cannot reorder it.
-   Without this, an Arabic phrase followed by an English one renders with
-   punctuation and digits in the wrong place. */
+/* Isolate a bidi run so neighbouring LTR text cannot reorder its punctuation. */
 .bidi-isolate { unicode-bidi: isolate; }
+
+/* Skeleton shimmer for loading states. */
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-alt);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.fade-up { animation: fade-up 0.28s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after, .fade-up { animation: none; }
+}
 
 img { max-width: 100%; }
 [hidden] { display: none !important; }
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

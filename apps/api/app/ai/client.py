@@ -202,5 +202,15 @@ def record_call(client, result: CallResult, user_id: str | None = None) -> str |
         row = client.table("model_calls").insert(result.telemetry_row(user_id)).execute()
         return row.data[0]["id"] if row.data else None
     except Exception as exc:  # noqa: BLE001 — telemetry must not break the request
-        log.error("telemetry_write_failed", error=str(exc))
+        # Swallowed on purpose: a logging failure must not cost a user their
+        # answer. But swallow LOUDLY — this exact path hid an RLS rejection
+        # that left model_calls empty and the Metrics tab reporting $0 spend,
+        # which is precisely what §7 exists to prevent.
+        log.error(
+            "telemetry_write_failed",
+            error=str(exc),
+            skill=result.skill_id,
+            cost_usd=round(result.cost_usd, 6),
+            hint="spend for this call is NOT recorded; check RLS on model_calls",
+        )
         return None

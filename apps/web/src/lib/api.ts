@@ -104,7 +104,37 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.status === 204 ? (undefined as T) : response.json();
 }
 
+export interface SkillEstimate {
+  skill: string;
+  cefr_level: string | null;
+  confidence: number;
+  n_observations: number;
+  sufficient: boolean;
+}
+
+export interface WeakSpot {
+  category: string;
+  subcategory: string;
+  count: number;
+  severity_mix: Record<string, number>;
+}
+
+export interface Overview {
+  attempts_total: number;
+  attempts_7d: number;
+  mean_content_score: number | null;
+  mean_language_score: number | null;
+  streak_days: number;
+  estimates: SkillEstimate[];
+  weak_spots: WeakSpot[];
+  activity: { date: string; count: number }[];
+  vocab_total: number;
+  cost_usd_total: number;
+}
+
 export const api = {
+  overview: () => request<Overview>("/metrics/overview"),
+
   me: () => request<{ id: string; email: string | null }>("/me"),
 
   listResources: () => request<Resource[]>("/resources"),

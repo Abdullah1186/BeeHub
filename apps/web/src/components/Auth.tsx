@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { Button, Card, Input, Wordmark } from "../ui";
 
 /**
  * Two sign-in paths.
@@ -48,78 +49,68 @@ export function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-semibold text-bee-700">BeeHub</h1>
-        <p className="mt-1 text-sm text-stone-500">
+      <div className="w-full max-w-sm fade-up">
+        <Wordmark size={36} />
+        <p className="mt-3 text-sm text-[var(--text-muted)]">
           Practice Arabic from your own books.
         </p>
 
         {sent ? (
-          <div className="mt-8 rounded-lg bg-bee-50 border border-bee-100 p-4">
-            <p className="text-sm text-stone-700">
+          <Card className="mt-8 bg-[var(--accent-soft)] p-5">
+            <p className="text-sm text-[var(--accent-text)]">
               Check <span className="font-medium">{email}</span> for a sign-in link.
             </p>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3"
               onClick={() => {
                 setSent(false);
                 setMode("password");
               }}
-              className="mt-3 text-sm text-bee-700 underline"
             >
               Use a password instead
-            </button>
-          </div>
+            </Button>
+          </Card>
         ) : (
           <form onSubmit={signIn} className="mt-8 space-y-3">
-            <input
+            <Input
               type="email"
               required
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm
-                         focus:border-bee-500 focus:outline-none focus:ring-1 focus:ring-bee-500"
             />
 
             {mode === "password" && (
-              <input
+              <Input
                 type="password"
                 required
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm
-                           focus:border-bee-500 focus:outline-none focus:ring-1 focus:ring-bee-500"
               />
             )}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full rounded-lg bg-bee-600 px-3 py-2 text-sm font-medium text-white
-                         hover:bg-bee-700 disabled:opacity-50"
-            >
-              {busy
-                ? "Working…"
-                : mode === "password"
-                  ? "Sign in"
-                  : "Send sign-in link"}
-            </button>
+            <Button type="submit" size="lg" loading={busy} className="w-full">
+              {busy ? "Working…" : mode === "password" ? "Sign in" : "Send sign-in link"}
+            </Button>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-[var(--bad-text)]">{error}</p>}
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              className="w-full"
               onClick={() => {
                 setMode(mode === "password" ? "link" : "password");
                 setError(null);
               }}
-              className="w-full text-center text-sm text-stone-500 hover:text-stone-800"
             >
               {mode === "password" ? "Email me a link instead" : "Use a password instead"}
-            </button>
+            </Button>
           </form>
         )}
       </div>
