@@ -13,7 +13,7 @@ import { Badge, Button, Card, ConfirmButton, EmptyState, Skeleton } from "../ui"
  * that actually builds retention, costing no extra interaction. Reset brings
  * the whole deck back.
  */
-export function Deck({ onBack }: { onBack: () => void }) {
+export function Deck({ onBack, hideBack }: { onBack: () => void; hideBack?: boolean }) {
   const [state, setState] = useState<DeckState | null>(null);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -92,7 +92,9 @@ export function Deck({ onBack }: { onBack: () => void }) {
   return (
     <div className="space-y-6 fade-up">
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        {!hideBack && (
+          <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        )}
         <div className="flex items-center gap-2">
           {state && state.resting > 0 && (
             <Badge tone="ok">{state.resting} known</Badge>

@@ -67,6 +67,95 @@ def deck(
     return [VocabCard(**row) for row in (query.execute().data or [])]
 
 
+class ManualVocab(BaseModel):
+    """A word the learner picked out themselves."""
+
+    arabic: str = Field(min_length=1, max_length=120)
+    translation: str = Field(min_length=1, max_length=300)
+    resource_id: str | None = None
+    context_sentence: str | None = Field(default=None, max_length=1000)
+    root: str | None = Field(default=None, max_length=40)
+    pos: str | None = None
+
+
+@router.post("/manual", response_model=VocabCard, status_code=status.HTTP_201_CREATED)
+def add_manual(
+    body: ManualVocab, user: AuthenticatedUser = Depends(current_user)
+) -> VocabCard:
+    """Add a word by hand.
+
+    Harvesting decides for you what is worth learning; this is the escape
+    hatch for when it is wrong — a word you hit while reading and want
+    regardless of what the extractor judged.
+
+    No fragmentation guard here: the learner typed or selected it, so if it
+    contains a space that is their decision, not extraction damage.
+    """
+    client = user_client(user.token)
+    arabic = body.arabic.strip()
+
+    row = {
+        "user_id": user.id,
+        "resource_id": body.resource_id,
+        "arabic": arabic,
+        "arabic_normalized": normalize_for_search(arabic),
+        "translation": body.translation.strip(),
+        "context_sentence": body.context_sentence,
+        "root": body.root,
+        "pos": body.pos,
+    }
+
+    try:
+        result = client.table("vocab_items").insert(row).execute()
+    except Exception as exc:
+        # unique (user_id, arabic_normalized)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="that word is already in your vocabulary",
+        ) from exc
+
+    saved = result.data[0]
+    log.info("vocab_added_manually", word=arabic)
+    return VocabCard(
+        id=saved["id"],
+        arabic=arabic,
+        root=body.root,
+        pos=body.pos,
+        translation=body.translation,
+        context_sentence=body.context_sentence,
+        resource_id=body.resource_id,
+    )
+
+
+@router.get("/chunks/{resource_id}", response_model=list[dict])
+def resource_text(
+    resource_id: str, user: AuthenticatedUser = Depends(current_user)
+) -> list[dict]:
+    """The readable text of a resource, gated by position.
+
+    This is what the manual-selection UI reads from: the learner sees the
+    passages they have actually reached and taps a word. Gated like everything
+    else, so picking words cannot leak unread pages.
+    """
+    from app.retrieval.selector import resolve_max_page
+
+    client = user_client(user.token)
+    max_page = resolve_max_page(client, resource_id, user.id)
+    if max_page < 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+
+    rows = (
+        client.table("resource_chunks")
+        .select("id, chunk_index, text, page_start")
+        .eq("resource_id", resource_id)
+        .lte("page_end", max_page)
+        .order("chunk_index")
+        .limit(200)
+        .execute()
+    ).data or []
+    return rows
+
+
 @router.post("/harvest", response_model=HarvestResult)
 def harvest(
     resource_id: str,

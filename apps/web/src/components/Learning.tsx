@@ -1,63 +1,86 @@
 import { useEffect, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
-import { Practice } from "./Practice";
 import { Deck } from "./Deck";
+import { Practice } from "./Practice";
 import { Vocab } from "./Vocab";
+import { VocabTable } from "./VocabTable";
+import { WordPicker } from "./WordPicker";
 
-/** Spec §2.3 — the learning tab. Pick a resource, pick a mode.
+/**
+ * Spec §2.3 — the learning tab.
  *
- *  Only Questions is built. The other modes are listed rather than hidden, so
- *  the shape of the product is visible and the spec's §2.3 table is legible in
- *  the UI rather than only in the document. */
+ * Modes run down the left as a rail, with their own sub-tabs on the right.
+ * The alternative — a grid of cards you click through to a full-screen view —
+ * hid where you were and made switching modes a round trip via Back.
+ */
 
-type Mode = "questions" | "harvest" | "deck" | "essays" | "speaking" | "photo";
+type ModeId = "questions" | "words" | "flashcards" | "essays" | "speaking" | "photo";
 
-const MODES: {
-  id: Mode;
+interface Mode {
+  id: ModeId;
   label: string;
+  icon: string;
   blurb: string;
   ready: boolean;
   phase?: string;
-  /** Review draws from the whole queue, so it needs no material selected. */
-  standalone?: boolean;
-}[] = [
+  /** Needs a book chosen before it can do anything. */
+  needsResource?: boolean;
+  tabs?: { id: string; label: string }[];
+}
+
+const MODES: Mode[] = [
   {
     id: "questions",
     label: "Questions",
-    blurb: "Comprehension questions written from the pages you have read.",
+    icon: "?",
+    blurb: "Comprehension questions from the pages you have read.",
     ready: true,
+    needsResource: true,
   },
   {
-    id: "harvest",
+    id: "words",
     label: "Collect words",
-    blurb: "Pull new vocabulary out of a passage you have read.",
+    icon: "+",
+    blurb: "Build your vocabulary from what you are reading.",
     ready: true,
+    needsResource: true,
+    tabs: [
+      { id: "auto", label: "Find for me" },
+      { id: "manual", label: "Pick myself" },
+    ],
   },
   {
-    id: "deck",
+    id: "flashcards",
     label: "Flashcards",
-    blurb: "Your whole deck. Know a card and it leaves; the rest stay.",
+    icon: "▣",
+    blurb: "Your deck, and everything in it.",
     ready: true,
-    standalone: true,
+    tabs: [
+      { id: "deck", label: "Practise" },
+      { id: "list", label: "All words" },
+    ],
   },
   {
     id: "essays",
     label: "Essays",
-    blurb: "Longer prompts on your book's themes, graded against CEFR.",
+    icon: "✎",
+    blurb: "Longer prompts, graded against CEFR.",
     ready: false,
     phase: "Phase 2",
   },
   {
     id: "speaking",
     label: "Speaking",
+    icon: "◉",
     blurb: "Speak Arabic; the tutor replies in text.",
     ready: false,
     phase: "Phase 3",
   },
   {
     id: "photo",
-    label: "Upload an answer",
+    label: "Photo answer",
+    icon: "▤",
     blurb: "Write on paper, photograph it, get it graded.",
     ready: false,
     phase: "Phase 3",
@@ -74,7 +97,8 @@ export function Learning({
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(focusResource);
-  const [mode, setMode] = useState<Mode | null>(focusResource ? "questions" : null);
+  const [mode, setMode] = useState<ModeId>("questions");
+  const [tab, setTab] = useState<string>("auto");
 
   useEffect(() => {
     api
@@ -85,22 +109,27 @@ export function Learning({
   }, []);
 
   useEffect(() => {
-    if (focusResource) {
-      setSelected(focusResource);
-      setMode("questions");
-    }
+    if (focusResource) setSelected(focusResource);
   }, [focusResource]);
 
   const usable = resources.filter(
     (r) => r.ingest_status === "ok" || r.ingest_status === "degraded",
   );
-  const selectedTitle = usable.find((r) => r.id === selected)?.title ?? null;
+  const current = MODES.find((m) => m.id === mode)!;
+  const selectedResource = usable.find((r) => r.id === selected);
+
+  // Keep the sub-tab valid when the mode changes.
+  useEffect(() => {
+    if (current.tabs && !current.tabs.some((t) => t.id === tab)) {
+      setTab(current.tabs[0].id);
+    }
+  }, [mode]);
 
   if (loading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-32 rounded-[var(--radius-card)]" />
+        <Skeleton className="h-64 rounded-[var(--radius-card)]" />
       </div>
     );
   }
@@ -115,144 +144,136 @@ export function Learning({
     );
   }
 
-  // Practising.
-  if (mode === "deck") {
-    return <Deck onBack={() => setMode(null)} />;
-  }
-
-  if (selected && mode === "harvest") {
-    return (
-      <Vocab
-        resourceId={selected}
-        onBack={() => {
-          setSelected(null);
-          setMode(null);
-        }}
-      />
-    );
-  }
-
-  if (selected && mode === "questions") {
-    return (
-      <Practice
-        resourceId={selected}
-        onBack={() => {
-          setSelected(null);
-          setMode(null);
-        }}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-8 fade-up">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Learning</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Choose what to practise from, then how.
-        </p>
-      </div>
+    <div className="space-y-6 fade-up">
+      <h1 className="text-2xl font-semibold tracking-tight">Learning</h1>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">
-          1 · Material {selectedTitle && <span className="text-[var(--accent-text)]">✓</span>}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {usable.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setSelected(r.id)}
-              aria-pressed={selected === r.id}
-              className="text-left"
-            >
-              {/* Selection needs to survive a glance: a ring, a filled tick and
-                  a word, not a background tint alone. Colour by itself is also
-                  the one cue some users cannot see. */}
-              <Card
-                interactive
-                className={`relative p-4 transition-all ${
-                  selected === r.id
-                    ? "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg)]"
-                    : "hover:border-[var(--accent)]/40"
-                }`}
+      <div className="grid gap-5 sm:grid-cols-[180px_1fr]">
+        {/* Mode rail. Horizontal scroll on narrow screens, vertical above. */}
+        <nav className="flex gap-2 overflow-x-auto sm:flex-col sm:overflow-visible">
+          {MODES.map((m) => {
+            const active = mode === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => m.ready && setMode(m.id)}
+                disabled={!m.ready}
+                aria-current={active ? "page" : undefined}
+                className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2.5
+                            text-left text-sm transition-colors sm:w-full ${
+                              active
+                                ? "bg-[var(--accent-soft)] font-medium text-[var(--accent-text)]"
+                                : m.ready
+                                  ? "text-[var(--text-muted)] hover:bg-[var(--surface-alt)] hover:text-[var(--text)]"
+                                  : "cursor-not-allowed text-[var(--text-subtle)] opacity-60"
+                            }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="arabic bidi-isolate truncate text-lg" dir="rtl" lang="ar">
-                    {r.title}
-                  </h3>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {r.ingest_status === "degraded" && <Badge tone="warn">issues</Badge>}
-                    {selected === r.id ? (
-                      <span
-                        className="flex h-5 w-5 items-center justify-center rounded-full
-                                   bg-[var(--accent)] text-[var(--accent-fg)]"
-                        aria-hidden="true"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                          <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="3"
-                                strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    ) : (
-                      <span className="h-5 w-5 rounded-full border-2 border-[var(--border)]"
-                            aria-hidden="true" />
-                    )}
-                  </div>
-                </div>
-                {r.total_length && (
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    page {r.position_value ?? 0} of {r.total_length}
-                  </p>
-                )}
-                {selected === r.id && (
-                  <p className="mt-2 text-xs font-medium text-[var(--accent-text)]">Selected</p>
-                )}
-              </Card>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">
-          2 · Mode
-          {selectedTitle && (
-            <>
-              {" · "}
-              <span className="arabic bidi-isolate text-[var(--accent-text)]" dir="rtl" lang="ar">
-                {selectedTitle}
-              </span>
-            </>
-          )}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {MODES.map((m) => (
-            <Card
-              key={m.id}
-              interactive={m.ready}
-              className={`p-4 ${m.ready ? "" : "opacity-60"}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{m.label}</p>
-                  <p className="mt-0.5 text-sm text-[var(--text-muted)]">{m.blurb}</p>
-                </div>
-                {!m.ready && <Badge>{m.phase}</Badge>}
-              </div>
-              {m.ready && (
-                <Button
-                  size="sm"
-                  className="mt-4 w-full"
-                  disabled={!m.standalone && !selected}
-                  onClick={() => setMode(m.id)}
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded
+                              text-xs ${
+                                active
+                                  ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                                  : "bg-[var(--surface-alt)]"
+                              }`}
                 >
-                  {m.standalone || selected ? "Start" : "Pick material first"}
-                </Button>
-              )}
+                  {m.icon}
+                </span>
+                <span className="whitespace-nowrap">{m.label}</span>
+                {!m.ready && <span className="ml-auto hidden text-[10px] sm:inline">soon</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="min-w-0 space-y-4">
+          <div>
+            <p className="text-sm text-[var(--text-muted)]">{current.blurb}</p>
+          </div>
+
+          {/* Material picker, only for the modes that need one. */}
+          {current.needsResource && (
+            <Card className="p-4">
+              <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-subtle)]">
+                Material
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {usable.map((r) => {
+                  const active = selected === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setSelected(r.id)}
+                      aria-pressed={active}
+                      className={`rounded-lg border px-3 py-2 text-left transition-all ${
+                        active
+                          ? "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent)]"
+                          : "border-[var(--border)] hover:border-[var(--accent)]/40"
+                      }`}
+                    >
+                      <span className="arabic bidi-isolate text-base" dir="rtl" lang="ar">
+                        {r.title}
+                      </span>
+                      {r.ingest_status === "degraded" && (
+                        <Badge tone="warn">issues</Badge>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </Card>
-          ))}
+          )}
+
+          {/* Sub-tabs. */}
+          {current.tabs && (
+            <div className="flex gap-1 border-b border-[var(--border)]">
+              {current.tabs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+                    tab === t.id
+                      ? "border-[var(--accent)] font-medium text-[var(--accent-text)]"
+                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {current.needsResource && !selectedResource ? (
+            <EmptyState title="Choose some material above" />
+          ) : (
+            <Content mode={mode} tab={tab} resourceId={selected} />
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
+}
+
+function Content({
+  mode,
+  tab,
+  resourceId,
+}: {
+  mode: ModeId;
+  tab: string;
+  resourceId: string | null;
+}) {
+  if (mode === "questions" && resourceId) {
+    return <Practice resourceId={resourceId} onBack={() => {}} hideBack />;
+  }
+  if (mode === "words" && resourceId) {
+    return tab === "manual" ? (
+      <WordPicker resourceId={resourceId} />
+    ) : (
+      <Vocab resourceId={resourceId} onBack={() => {}} hideBack />
+    );
+  }
+  if (mode === "flashcards") {
+    return tab === "list" ? <VocabTable /> : <Deck onBack={() => {}} hideBack />;
+  }
+  return null;
 }

@@ -4,7 +4,15 @@ import { Badge, Button, Card, EmptyState, Skeleton, Spinner } from "../ui";
 
 /** Spec §2.3 — Quizlet-style flashcards, harvested from the learner's own
  *  material rather than a generic word list. */
-export function Vocab({ resourceId, onBack }: { resourceId: string; onBack: () => void }) {
+export function Vocab({
+  resourceId,
+  onBack,
+  hideBack,
+}: {
+  resourceId: string;
+  onBack: () => void;
+  hideBack?: boolean;
+}) {
   const [cards, setCards] = useState<VocabCard[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -71,7 +79,9 @@ export function Vocab({ resourceId, onBack }: { resourceId: string; onBack: () =
   return (
     <div className="space-y-6 fade-up">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        {!hideBack && (
+          <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        )}
         {cards.length > 0 && (
           <span className="text-sm text-[var(--text-muted)]">
             {index + 1} of {cards.length}

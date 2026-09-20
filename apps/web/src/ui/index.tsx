@@ -174,8 +174,14 @@ export function Input({ className = "", ...rest }: InputHTMLAttributes<HTMLInput
 
 /** Skeleton placeholder. Shaped like the content it replaces, so the layout
  *  does not jump when the real thing arrives. */
-export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`skeleton rounded-md ${className}`} />;
+export function Skeleton({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return <div className={`skeleton rounded-md ${className}`} style={style} />;
 }
 
 export function SkeletonCard() {

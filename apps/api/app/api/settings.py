@@ -29,13 +29,11 @@ class Settings(BaseModel):
     # until enough graded answers exist to measure one.
     target_level: CEFRLevel | None = None
     daily_goal: int = Field(default=10, ge=1, le=200)
-    dialect_pref: str = "MSA"
 
 
 class SettingsUpdate(BaseModel):
     target_level: CEFRLevel | None = None
     daily_goal: int | None = Field(default=None, ge=1, le=200)
-    dialect_pref: str | None = None
 
 
 @router.get("", response_model=Settings)
@@ -43,7 +41,7 @@ def get_settings_(user: AuthenticatedUser = Depends(current_user)) -> Settings:
     client = user_client(user.token)
     rows = (
         client.table("profiles")
-        .select("target_level, daily_goal, dialect_pref")
+        .select("target_level, daily_goal")
         .eq("id", user.id)
         .execute()
     ).data

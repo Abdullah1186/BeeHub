@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type UserSettings } from "../lib/api";
-import { Badge, Button, Card, Input, Skeleton } from "../ui";
+import { Badge, Card, Input, Skeleton } from "../ui";
 
 /** Spec §2.6 — target level, daily goal, dialect preference. */
 
@@ -12,8 +12,6 @@ const LEVELS = [
   { id: "C1", label: "C1", blurb: "Long, complex, literary" },
   { id: "C2", label: "C2", blurb: "Virtually anything" },
 ];
-
-const DIALECTS = ["MSA", "Classical", "Levantine", "Egyptian", "Gulf", "Maghrebi"];
 
 export function Settings() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -130,25 +128,6 @@ export function Settings() {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium">Dialect</h2>
-        <div className="flex flex-wrap gap-2">
-          {DIALECTS.map((d) => (
-            <Button
-              key={d}
-              size="sm"
-              variant={settings?.dialect_pref === d ? "primary" : "secondary"}
-              onClick={() => save({ dialect_pref: d })}
-            >
-              {d}
-            </Button>
-          ))}
-        </div>
-        <p className="text-xs text-[var(--text-subtle)]">
-          Generated Arabic follows this. Material in another variety is still quoted
-          as written.
-        </p>
-      </section>
     </div>
   );
 }

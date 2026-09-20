@@ -209,7 +209,6 @@ export interface QueueStats {
 export interface UserSettings {
   target_level: string | null;
   daily_goal: number;
-  dialect_pref: string;
 }
 
 export const api = {
@@ -240,6 +239,19 @@ export const api = {
     }),
 
   enqueueVocab: () => request<QueueStats>("/review/enqueue-vocab", { method: "POST" }),
+
+  addVocabManual: (body: {
+    arabic: string;
+    translation: string;
+    resource_id?: string;
+    context_sentence?: string;
+    root?: string;
+  }) => request<VocabCard>("/vocab/manual", { method: "POST", body: JSON.stringify(body) }),
+
+  resourceChunks: (resourceId: string) =>
+    request<{ id: string; chunk_index: number; text: string; page_start: number }[]>(
+      `/vocab/chunks/${resourceId}`,
+    ),
 
   vocabDeck: (resourceId?: string) =>
     request<VocabCard[]>(`/vocab/deck${resourceId ? `?resource_id=${resourceId}` : ""}`),

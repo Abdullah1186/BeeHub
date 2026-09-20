@@ -10,7 +10,15 @@ const VERDICT: Record<string, { label: string; tone: "ok" | "warn" | "neutral" |
   contradicted: { label: "Contradicted", tone: "bad" },
 };
 
-export function Practice({ resourceId, onBack }: { resourceId: string; onBack: () => void }) {
+export function Practice({
+  resourceId,
+  onBack,
+  hideBack,
+}: {
+  resourceId: string;
+  onBack: () => void;
+  hideBack?: boolean;
+}) {
   const [question, setQuestion] = useState<Question | null>(null);
   const [answer, setAnswer] = useState("");
   const [grade, setGrade] = useState<Grade | null>(null);
@@ -92,7 +100,9 @@ export function Practice({ resourceId, onBack }: { resourceId: string; onBack: (
   return (
     <div className="space-y-6 fade-up">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        {!hideBack && (
+          <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
+        )}
         <Badge tone="accent">{question.difficulty_cefr}</Badge>
       </div>
 
