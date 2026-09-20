@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "تحدثا عن أشياء كثيرة",
+      "reasoning": "The answer vaguely mentions 'many things' without specifying the book about Andalusian history."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "absent",
+      "evidence_span": "اتفقا على شيء ما",
+      "reasoning": "The answer vaguely states they agreed on 'something' without specifying reading the book together in the library after classes."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "Your Arabic is correct, but the answer is too vague to show you understood what they discussed or agreed upon. Try to include the specific details: the book about Andalusian history and their plan to read it together in the library after classes."
+}

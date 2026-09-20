@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "مؤلَّف حديث في تاريخ الأندلس",
+      "reasoning": "States a new book about the history of Andalusia, matching the source."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "تواعدا على مطالعته سويا بالمكتبة",
+      "reasoning": "Mentions reading together in the library but omits that this was after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.85,
+  "holistic_note": "Good paraphrase capturing the book's topic and the agreement to read together in the library, but you left out the detail that this would happen after classes ended."
+}

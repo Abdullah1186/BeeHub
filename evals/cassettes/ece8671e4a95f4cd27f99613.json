@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "الكتاب الذي تحدثا عنه كان عن الأندلس",
+      "reasoning": "States the topic of the book they discussed was Andalusia, matching the source, though omits that it was new and that Ahmad was carrying it."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "والقراءة المشتركة ستكون بالمكتبة بعد الدرس",
+      "reasoning": "Conveys they agreed to read together in the library after classes, matching the source's timing and location."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.85,
+  "holistic_note": "Good comprehension of both the topic and the plan; the Arabic is grammatically sound, though the answer omits that the book was new and that Ahmad was the one carrying it."
+}

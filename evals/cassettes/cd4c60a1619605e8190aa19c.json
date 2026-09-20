@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "قرأت الكتاب الولد الجديد.",
+      "reasoning": "The sentence stacks three definite nouns (الكتاب، الولد، الجديد) without a clear syntactic relation, so it is not a grammatically correct sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "word_order",
+      "span": "قرأت الكتاب الولد الجديد.",
+      "correction": "قرأ الولدُ الكتابَ الجديدَ.",
+      "explanation": "The verb-object structure is malformed: two nouns (الكتاب and الولد) are juxtaposed with no connector or clear grammatical role, obscuring who read what.",
+      "severity": "blocking"
+    }
+  ],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "The sentence you wrote is not grammatically well-formed — it strings together 'الكتاب', 'الولد', and 'الجديد' without a clear subject-verb-object structure. Try something like: قرأ الولدُ الكتابَ الجديدَ (The boy read the new book)."
+}

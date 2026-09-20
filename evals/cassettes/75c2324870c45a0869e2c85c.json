@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "contradicted",
+      "evidence_span": "لم يتحدثا عن الكتاب",
+      "reasoning": "The learner states they did not talk about the book, contradicting the source which says they talked about it at length."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "contradicted",
+      "evidence_span": "ولم يتفقا على قراءته",
+      "reasoning": "The learner states they did not agree to read it, contradicting the source which says they agreed to read it together in the library after classes."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.0,
+  "holistic_note": "Your Arabic is grammatically correct, but the content is reversed: the boys did talk about the book and did agree to read it together in the library after classes, according to the passage."
+}

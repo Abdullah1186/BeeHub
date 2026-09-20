@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "زرت المدينة الكبير في الصيف الماضي.",
+      "reasoning": "The learner reproduced the sentence exactly as given in the source, matching the required key point."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "You copied the sentence exactly as it appeared in the source; note that the source itself contains an adjective agreement issue (الكبير should be الكبيرة to match the feminine noun المدينة), which is not counted as your own error since you reproduced it verbatim."
+}

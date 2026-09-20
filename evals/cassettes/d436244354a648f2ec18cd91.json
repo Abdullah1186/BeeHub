@@ -1,0 +1,10 @@
+{
+  "gradable": false,
+  "ungradable_reason": "The learner answered in English instead of Arabic, which is required for this exercise.",
+  "key_points": [],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.0,
+  "holistic_note": "Your answer is in English, but this exercise requires a response in Arabic. Please rewrite your answer in Arabic so it can be evaluated."
+}

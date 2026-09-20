@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": null,
+      "reasoning": "The sentence uses the present-tense verb أذهب with the past-time adverb أمس, so it is not a grammatically correct sentence as required."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "verb_conjugation",
+      "span": "أمس أذهب",
+      "correction": "أمس ذهبت",
+      "explanation": "The past-time adverb أمس requires a past-tense verb, but the present-tense أذهب was used instead.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "You were asked to write a correct sentence, but this one mixes the past-time word أمس with a present-tense verb (أذهب). Use the past tense: أمس ذهبتُ إلى المدرسة مبكراً."
+}

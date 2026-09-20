@@ -1,0 +1,48 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الاندلس",
+      "reasoning": "States they talked about a book on the history of Andalusia, matching the source's topic though omitting that it was new and carried by Ahmad."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "واتفقا ان يقرآه معا في المكتبه بعد الدروس",
+      "reasoning": "Correctly states they agreed to read it together in the library after classes, matching the source."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "الاندلس",
+      "correction": "الأندلس",
+      "explanation": "The hamza on alif is omitted in the proper noun.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "ta_marbuta",
+      "span": "المكتبه",
+      "correction": "المكتبة",
+      "explanation": "Tāʾ marbūṭa is written as hāʾ.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "ان يقرآه",
+      "correction": "أن يقرآه",
+      "explanation": "The subordinating particle أن is missing its hamza.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "You captured both main points clearly — the topic of conversation and their agreement to read together in the library after class. Just watch a few small spelling slips: hamza placement and tāʾ marbūṭa."
+}

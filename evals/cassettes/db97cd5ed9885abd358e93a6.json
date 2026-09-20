@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "الولدان ذهبوا إلى الحديقة معا.",
+      "reasoning": "The learner reproduced the exact sentence given as the source example of a correct sentence for this task."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "You reproduced the given sentence exactly as provided; note that in careful MSA the dual subject الولدان would take the dual verb ذهبا rather than the plural ذهبوا, though this reflects the source text itself rather than your own composition."
+}

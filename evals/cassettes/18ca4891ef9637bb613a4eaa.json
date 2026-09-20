@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الأندلس",
+      "reasoning": "States they talked about a book on the history of Andalusia, matching the source, though it omits that Ahmad was the one carrying it."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "واتفقا على قراءته في البيت بعد الدروس",
+      "reasoning": "Conveys they agreed to read it together after classes, but states the location as home instead of the library mentioned in the source."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "Good grasp of the main idea — you correctly identified the topic of conversation and that they planned to read together after class. However, the source specifies they agreed to meet in the library, not at home; double-check details like location when summarizing."
+}

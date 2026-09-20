@@ -1,0 +1,321 @@
+# Error-tagging golden set (spec §5.8: "30+ Arabic sentences with known,
+# human-verified errors").
+#
+# Each case gives a sentence, the span that is wrong, and the category the
+# tagger must assign. Scored by span overlap (>= 0.5) plus category equality.
+#
+# The `clean/*` cases carry no error at all and exist to measure FALSE
+# POSITIVES. They matter more than the positive cases: a tagger that invents
+# errors in correct Arabic makes the metrics tab lie, and recall alone will
+# never reveal it. §5.3 put this task on Opus precisely because Arabic
+# morphology is hard; we run it on Sonnet, so this is the tripwire.
+
+version: 1
+
+cases:
+  # --- morphology ---
+  - id: morph/verb_plural_agreement
+    sentence: الطلاب يذهب إلى المدرسة كل صباح.
+    span: يذهب
+    category: morphology
+    subcategory: verb_conjugation
+    correction: يذهبون
+    note: Plural subject, singular verb, SVO order.
+
+  - id: morph/verb_gender
+    sentence: فاطمة ذهب إلى السوق أمس.
+    span: ذهب
+    category: morphology
+    subcategory: verb_conjugation
+    correction: ذهبت
+    note: Feminine subject, masculine verb.
+
+  - id: morph/broken_plural
+    sentence: قرأت ثلاثة كتابات في الأسبوع الماضي.
+    span: كتابات
+    category: morphology
+    subcategory: broken_plural
+    correction: كتب
+    note: Sound feminine plural invented where a broken plural is required.
+
+  - id: morph/dual_verb
+    sentence: الولدان ذهبوا إلى الحديقة معا.
+    span: ذهبوا
+    category: morphology
+    subcategory: dual
+    correction: ذهبا
+    note: Dual subject taking plural verb agreement.
+
+  - id: morph/verb_form_confusion
+    sentence: علمت اللغة العربية في الجامعة لمدة سنتين وأتقنتها.
+    span: علمت
+    category: morphology
+    subcategory: verb_form
+    correction: تعلمت
+    note: Form II (taught) where form V (learned) is meant.
+
+  - id: morph/derived_noun
+    sentence: ذهبت إلى مكتوب البريد لإرسال الرسالة.
+    span: مكتوب
+    category: morphology
+    subcategory: derived_noun
+    correction: مكتب
+    note: Passive participle where a noun of place is required.
+
+  - id: morph/past_present_mix
+    sentence: أمس أذهب إلى المدرسة مبكرا.
+    span: أذهب
+    category: morphology
+    subcategory: verb_conjugation
+    correction: ذهبت
+    note: Present tense with an explicit past adverbial.
+
+  # --- syntax ---
+  - id: syntax/idafa_article
+    sentence: قرأت الكتاب الولد الجديد.
+    span: الكتاب الولد
+    category: syntax
+    subcategory: idafa
+    correction: كتاب الولد
+    note: First term of an idafa carries the definite article.
+
+  - id: syntax/adjective_agreement_gender
+    sentence: زرت المدينة الكبير في الصيف الماضي.
+    span: الكبير
+    category: syntax
+    subcategory: adjective_agreement
+    correction: الكبيرة
+    note: Feminine noun, masculine adjective.
+
+  - id: syntax/adjective_definiteness
+    sentence: سكنت في البيت كبير قرب البحر.
+    span: كبير
+    category: syntax
+    subcategory: adjective_agreement
+    correction: الكبير
+    note: Definite noun, indefinite adjective.
+
+  - id: syntax/wrong_preposition
+    sentence: بحثت على الكتاب في المكتبة طويلا.
+    span: على
+    category: syntax
+    subcategory: particle_usage
+    correction: عن
+    note: بحث pairs with عن, not على.
+
+  - id: syntax/negation_past
+    sentence: لا ذهبت إلى المدرسة أمس بسبب المرض.
+    span: لا ذهبت
+    category: syntax
+    subcategory: negation
+    correction: لم أذهب
+    note: لا cannot negate the past tense.
+
+  - id: syntax/negation_future
+    sentence: لم أذهب غدا إلى الحفلة.
+    span: لم أذهب
+    category: syntax
+    subcategory: negation
+    correction: لن أذهب
+    note: لم is past; لن is future.
+
+  - id: syntax/conditional
+    sentence: إن تدرس تنجح في الامتحان بإذن الله.
+    span: تدرس
+    category: syntax
+    subcategory: conditional
+    correction: تدرسْ
+    note: إن requires the jussive in both clauses.
+
+  - id: syntax/non_human_plural
+    sentence: الكتب جميلون ومفيدون للقارئ.
+    span: جميلون
+    category: agreement
+    subcategory: gender
+    correction: جميلة
+    note: Non-human plurals take feminine singular agreement.
+
+  # --- case marking ---
+  - id: case/accusative_object
+    sentence: رأيت الولدُ في الشارع أمس.
+    span: الولدُ
+    category: case_marking
+    subcategory: accusative
+    correction: الولدَ
+    note: Direct object marked nominative.
+
+  - id: case/genitive_after_preposition
+    sentence: ذهبت إلى المدرسةُ في الصباح.
+    span: المدرسةُ
+    category: case_marking
+    subcategory: genitive
+    correction: المدرسةِ
+    note: Object of a preposition marked nominative.
+
+  - id: case/inna_accusative
+    sentence: إن الولدُ مجتهد في دراسته.
+    span: الولدُ
+    category: case_marking
+    subcategory: accusative
+    correction: الولدَ
+    note: The noun after إنّ takes the accusative.
+
+  - id: case/idafa_genitive
+    sentence: هذا كتابُ الولدُ الجديد.
+    span: الولدُ
+    category: case_marking
+    subcategory: genitive
+    correction: الولدِ
+    note: Second term of an idafa takes the genitive.
+
+  # --- agreement ---
+  - id: agree/number_counted
+    sentence: عندي ثلاثة كتاب في الحقيبة.
+    span: كتاب
+    category: agreement
+    subcategory: number
+    correction: كتب
+    note: 3-10 take a plural counted noun.
+
+  - id: agree/demonstrative_gender
+    sentence: هذا المدرسة كبيرة وجميلة.
+    span: هذا
+    category: agreement
+    subcategory: gender
+    correction: هذه
+    note: Masculine demonstrative with a feminine noun.
+
+  - id: agree/dual_adjective
+    sentence: الكتابان الجديد على الطاولة.
+    span: الجديد
+    category: agreement
+    subcategory: number
+    correction: الجديدان
+    note: Dual noun, singular adjective.
+
+  # --- lexis ---
+  - id: lexis/wrong_verb
+    sentence: أكلت الماء بعد الرياضة مباشرة.
+    span: أكلت
+    category: lexis
+    subcategory: wrong_word
+    correction: شربت
+    note: Eating water.
+
+  - id: lexis/calque
+    sentence: أخذت حماما قبل الذهاب إلى العمل.
+    span: أخذت حماما
+    category: lexis
+    subcategory: calque
+    correction: استحممت
+    note: Take-a-shower translated word for word.
+
+  - id: lexis/register_dialect
+    sentence: إيه الأخبار اليوم يا أستاذ؟
+    span: إيه الأخبار
+    category: lexis
+    subcategory: register_mismatch
+    correction: ما الأخبار
+    note: Egyptian colloquial in an MSA context.
+
+  - id: lexis/register_maa_baad
+    sentence: سأقرأ الكتاب مع بعض أصدقائي في المكتبة.
+    span: مع بعض
+    category: lexis
+    subcategory: register_mismatch
+    correction: معا
+    note: Colloquial "together" calqued into MSA.
+
+  # --- orthography ---
+  - id: orth/hamza_seat
+    sentence: سئل المعلم الطالب عن الدرس.
+    span: سئل
+    category: orthography
+    subcategory: hamza
+    correction: سأل
+    note: >-
+      Wrong hamza seat reverses the voice — "was asked" for "asked".
+      Orthographic in form, meaning-changing in effect.
+
+  - id: orth/ta_marbuta
+    sentence: ذهبت إلى المدرسه في الصباح.
+    span: المدرسه
+    category: orthography
+    subcategory: ta_marbuta
+    correction: المدرسة
+    note: ة written as ه.
+
+  - id: orth/alif_maqsura
+    sentence: وضعت الكتاب علي الطاولة.
+    span: علي
+    category: orthography
+    subcategory: alif_maqsura
+    correction: على
+    note: ى written as ي, turning the preposition into a name.
+
+  - id: orth/hamza_missing
+    sentence: قرات الكتاب كاملا في يوم واحد.
+    span: قرات
+    category: orthography
+    subcategory: hamza
+    correction: قرأت
+    note: Missing hamza.
+
+  - id: orth/alif_hamza_initial
+    sentence: احمد طالب مجتهد في المدرسة.
+    span: احمد
+    category: orthography
+    subcategory: hamza
+    correction: أحمد
+    note: Missing hamza on initial alif in a proper name.
+
+  # --- discourse ---
+  - id: disc/connective
+    sentence: أحب القراءة و لا أحب الرياضة و أحب الموسيقى و أكره السباحة.
+    span: و
+    category: discourse
+    subcategory: connectives
+    correction: لكن
+    note: Contrast chained with و where an adversative is needed.
+
+  # --- CLEAN: must produce NO tags. These measure false positives. ---
+  - id: clean/simple_past
+    sentence: ذهب الولد إلى المدرسة في الصباح الباكر.
+    expect_no_errors: true
+
+  - id: clean/vocalised
+    sentence: كَتَبَ المُعَلِّمُ الدَّرْسَ عَلى السَّبُّورَةِ.
+    expect_no_errors: true
+    note: Fully vocalised and correct. Harakat must not be mistaken for errors.
+
+  - id: clean/complex_sentence
+    sentence: >-
+      عندما وصل الطلاب إلى المدرسة، كان المعلم قد بدأ الدرس، فجلسوا في أماكنهم
+      بهدوء واستمعوا إليه باهتمام.
+    expect_no_errors: true
+    note: Subordination, past perfect, and a fa- sequence. All correct.
+
+  - id: clean/idafa_chain
+    sentence: قرأت مقدمة كتاب تاريخ الأندلس في المكتبة.
+    expect_no_errors: true
+    note: A three-term idafa chain, correctly formed.
+
+  - id: clean/non_human_plural_correct
+    sentence: الكتب الجديدة موجودة على الرف العلوي.
+    expect_no_errors: true
+    note: Non-human plural with correct feminine singular agreement.
+
+  - id: clean/dual_correct
+    sentence: الولدان ذهبا إلى الحديقة ولعبا هناك طويلا.
+    expect_no_errors: true
+    note: Correct dual throughout.
+
+  - id: clean/negation_correct
+    sentence: لم يحضر الطالب الدرس أمس، ولن يحضر غدا أيضا.
+    expect_no_errors: true
+    note: لم with past, لن with future. Both correct.
+
+  - id: clean/passive
+    sentence: كُتِبَ الدرس على السبورة قبل وصول الطلاب.
+    expect_no_errors: true
+    note: Correct passive.

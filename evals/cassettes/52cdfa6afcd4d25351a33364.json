@@ -1,0 +1,48 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الاندلس",
+      "reasoning": "The learner states they talked about a book on the history of Andalusia, matching the key point's core content."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "واتفقا ان يقرآه معا في المكتبه بعد الدروس",
+      "reasoning": "States they agreed to read it together in the library after lessons, matching the key point."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "الاندلس",
+      "correction": "الأندلس",
+      "explanation": "The hamza on alif is missing in الأندلس.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "ان",
+      "correction": "أن",
+      "explanation": "The subordinating particle أن requires a hamza that is missing here.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "ta_marbuta",
+      "span": "المكتبه",
+      "correction": "المكتبة",
+      "explanation": "The tāʾ marbūṭa is written as hāʾ instead of ة.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.95,
+  "holistic_note": "Good comprehension of both key points, expressed clearly with minor spelling slips (missing hamzas and tāʾ marbūṭa written as hāʾ)."
+}

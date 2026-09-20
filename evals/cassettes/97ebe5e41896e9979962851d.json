@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "بحثت على الكتاب في المكتبة طويلا.",
+      "reasoning": "The sentence is structurally complete but contains a preposition error, so it is not fully grammatically correct."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "particle_usage",
+      "span": "بحثت على الكتاب",
+      "correction": "بحثت عن الكتاب",
+      "explanation": "The verb بحث pairs with the preposition عن, not على, to mean 'searched for'.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.4,
+  "holistic_note": "Your sentence is mostly well-formed, but بحث takes the preposition عن rather than على when meaning 'to search for something'."
+}

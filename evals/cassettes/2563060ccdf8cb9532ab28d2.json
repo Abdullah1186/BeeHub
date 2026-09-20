@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "قرأت ثلاثة كتابات في الأسبوع الماضي.",
+      "reasoning": "The learner reproduced a complete, syntactically well-formed Arabic sentence exactly as given in the source."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 1.0,
+  "holistic_note": "You copied the source sentence exactly, which satisfies the task of producing a correct Arabic sentence."
+}

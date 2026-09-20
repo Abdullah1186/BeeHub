@@ -1,0 +1,28 @@
+{
+  "prompt_hash": "1016617684ce8f7a1025698e5920470c826d1bf293dab3e17385bb17781a6687",
+  "pass_rate": 0.9545,
+  "cases": {
+    "paraphrase/synonyms": true,
+    "paraphrase/reordered": true,
+    "paraphrase/concise": true,
+    "paraphrase/verbose": true,
+    "paraphrase/different_syntax": true,
+    "paraphrase/minor_spelling": true,
+    "paraphrase/english_loanword_free": true,
+    "paraphrase/pronoun_reference": true,
+    "paraphrase/partial_vocalisation": true,
+    "paraphrase/dialect_tinged": true,
+    "near_miss/wrong_subject": true,
+    "near_miss/wrong_place": false,
+    "near_miss/wrong_time": true,
+    "near_miss/plausible_invention": true,
+    "near_miss/negation_flip": true,
+    "near_miss/wrong_person": true,
+    "near_miss/topic_drift": true,
+    "near_miss/half_right_half_invented": true,
+    "near_miss/vague_nonanswer": true,
+    "near_miss/copies_question": true,
+    "ungradable/blank": true,
+    "ungradable/wrong_language": true
+  }
+}

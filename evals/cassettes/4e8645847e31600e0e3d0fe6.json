@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "ذهبت إلى المدرسةُ في الصباح.",
+      "reasoning": "The learner produced a complete sentence identical to the source, satisfying the task of writing a correct sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "You wrote a complete, meaningful sentence exactly as given in the source; well done."
+}

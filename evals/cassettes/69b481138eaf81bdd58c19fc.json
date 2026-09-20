@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "ذهبت إلى المدرسةُ في الصباح.",
+      "reasoning": "The learner produced a sentence matching the source, satisfying the open-ended requirement for a sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.8,
+  "holistic_note": "You reproduced the given sentence exactly; note that the case ending on المدرسة should be genitive (المدرسةِ) after the preposition إلى, though this reflects the source text itself rather than a new error you introduced."
+}

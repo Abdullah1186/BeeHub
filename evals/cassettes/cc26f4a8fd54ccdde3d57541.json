@@ -1,0 +1,25 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الأندلس",
+      "reasoning": "The learner states they talked about a book on the history of Andalusia, matching the source."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "contradicted",
+      "evidence_span": "واتفقا على كتابة بحث عنه للمعلم",
+      "reasoning": "The learner asserts they agreed to write a research paper for the teacher, but the source says they agreed to read the book together in the library after classes."
+    }
+  ],
+  "unsupported_claims": [
+    "They agreed to write a research paper for the teacher."
+  ],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.4,
+  "holistic_note": "You correctly identified the topic of their conversation (a book on Andalusian history), but you misstated what they agreed to do — the source says they planned to read the book together in the library, not write a report for the teacher."
+}

@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الأندلس",
+      "reasoning": "Correctly conveys they talked about a book on the history of Andalusia, though it omits that it was Ahmad's new book."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "contradicted",
+      "evidence_span": "واتفقا على قراءته في البيت بعد الدروس",
+      "reasoning": "States they agreed to read it at home, but the source says they agreed to read it in the library."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.5,
+  "holistic_note": "You correctly identified the topic of conversation and the timing (after classes), but you got the location wrong — the source says they agreed to read the book in the library (في المكتبة), not at home."
+}

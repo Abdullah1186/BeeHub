@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تحدثا عن كتاب عن تاريخ الأندلس",
+      "reasoning": "The learner states they talked about a book on the history of Andalusia, matching the source."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "contradicted",
+      "evidence_span": "اتفقا على شرائه من المكتبة بعد الدروس",
+      "reasoning": "The learner says they agreed to buy the book from the library after classes, but the source says they agreed to read it together in the library after classes."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.5,
+  "holistic_note": "You correctly identified the topic of their conversation, but the second part is inaccurate: the source says they agreed to read the book together in the library, not to buy it there."
+}

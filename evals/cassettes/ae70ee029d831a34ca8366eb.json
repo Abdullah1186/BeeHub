@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تَحدثا عن كِتاب عن تاريخ الأندَلُس",
+      "reasoning": "Conveys that they talked about a book on the history of Andalusia, though omits that it was new and that Ahmad was carrying it."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "واتفقا على قِراءته معاً في المَكتبة",
+      "reasoning": "States they agreed to read it together in the library but omits the detail that this would be after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "Good, clear answer with correct Arabic. You captured the main topic and the agreement to read together in the library, but left out that the book was new and that they planned to read it after classes ended."
+}

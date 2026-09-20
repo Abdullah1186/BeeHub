@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "كان حديثهما عن تاريخ الأندلس",
+      "reasoning": "States the topic was the history of Andalusia but omits that it concerned a new book Ahmad was carrying."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "اتفقا أن يقرآ الكتاب معا في المكتبة بعد الدروس",
+      "reasoning": "Correctly states they agreed to read the book together in the library after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.8,
+  "holistic_note": "Good grasp of the agreement to read together in the library after class; you could be more specific that the topic was the new book Ahmad was carrying about Andalusian history, not just the subject matter itself."
+}

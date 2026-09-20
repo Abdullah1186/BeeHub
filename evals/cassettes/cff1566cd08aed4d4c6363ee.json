@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "فاطمة ذهب إلى السوق أمس.",
+      "reasoning": "The learner copied the source sentence verbatim, which itself contains a gender agreement error (فاطمة ذهب instead of ذهبت), so no correct sentence was produced."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "You copied the given sentence rather than writing your own correct one, and the sentence itself has a subject-verb gender mismatch (فاطمة ذهب should be فاطمة ذهبت)."
+}

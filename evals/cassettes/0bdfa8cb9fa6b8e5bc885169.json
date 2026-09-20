@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "ذهبت إلى مكتوب البريد لإرسال الرسالة.",
+      "reasoning": "The learner produced a complete sentence with correct subject-verb-object structure, matching the source passage exactly."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.85,
+  "holistic_note": "The sentence is structurally sound and matches the source. Note that the source itself uses 'مكتوب البريد' where 'مكتب البريد' (post office) is intended, but since you copied it verbatim from the given text, this is not counted as your own error."
+}

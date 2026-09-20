@@ -1,0 +1,66 @@
+# Tier 2: live evals. Costs real money (~$0.60 for the full suite).
+#
+# Gated three ways so it cannot fire by accident:
+#   1. `paths:` — only when skills/ or config/models.yaml actually changed.
+#      Everything else replays cassettes for free in tests.yml.
+#   2. `environment: evals` — a GitHub environment that can require approval
+#      before the job runs and holds the API key as a secret.
+#   3. workflow_dispatch — manual runs when you want them.
+#
+# Why this gating: a prompt change invalidates every cassette by hash, so the
+# suite MUST be re-measured. But an unchanged prompt re-measured on every push
+# is pure waste, and evals that cost money on every PR get switched off.
+
+name: evals (live)
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "config/models.yaml"
+      - "evals/cases/**"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Which suite to run
+        type: choice
+        options: [all, short_answer, error_tagging]
+        default: all
+
+jobs:
+  live:
+    name: Live evals (spends money)
+    runs-on: ubuntu-latest
+    environment: evals      # add a required reviewer here to gate spend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install
+        working-directory: apps/api
+        run: pip install -e ".[dev]"
+
+      - name: Run live evals and re-record cassettes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python evals/runner.py \
+            --suite "${{ github.event.inputs.suite || 'all' }}" \
+            --live --verbose
+
+      - name: Commit refreshed cassettes and baselines
+        # Cassettes are committed deliberately: they are what makes every
+        # subsequent PR free. Pushing them back means the next run replays.
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add evals/cassettes evals/baselines
+          if git diff --staged --quiet; then
+            echo "no cassette changes"
+          else
+            git commit -m "Re-record eval cassettes for the updated prompt"
+            git push
+          fi

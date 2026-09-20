@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "إن تدرس تنجح في الامتحان بإذن الله.",
+      "reasoning": "The learner wrote a grammatically correct conditional sentence matching the source."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 1.0,
+  "holistic_note": "Correct and well-formed conditional sentence using إن with the jussive."
+}

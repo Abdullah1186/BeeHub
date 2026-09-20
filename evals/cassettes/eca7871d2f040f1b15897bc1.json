@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "عن كتاب الأندلس",
+      "reasoning": "Identifies the topic as a book about Andalusia, matching the source's book about the history of Andalusia, though omitting that it was new and that Ahmad was carrying it."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "وسيقرآنه معا في المكتبة",
+      "reasoning": "States they will read it together in the library but omits that this was to happen after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "You captured the main idea—talking about a book on Andalusia and agreeing to read it together in the library—but left out that the book was new, that Ahmad was carrying it, and that they planned to read it after classes ended."
+}

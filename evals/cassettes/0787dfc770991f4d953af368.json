@@ -1,0 +1,25 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "عن الكتاب الجديد الذي كان يحمله، وهو كتاب يتناول تاريخ الأندلس",
+      "reasoning": "The learner states Ahmad was carrying a new book about the history of Andalusia, matching the source."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "اتفقا فيما بينهما على أن يقرآ هذا الكتاب معا في مكتبة المدرسة بعد أن تنتهي دروس ذلك اليوم",
+      "reasoning": "The learner states they agreed to read the book together in the library after classes ended, matching the source."
+    }
+  ],
+  "unsupported_claims": [
+    "Specifying the library as 'مكتبة المدرسة' (the school library) when the source only says 'المكتبة'."
+  ],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.95,
+  "holistic_note": "Excellent, well-structured answer that faithfully conveys both key points with correct, fluent Arabic. The added detail specifying it as the school library is a reasonable inference but not explicitly stated in the source."
+}

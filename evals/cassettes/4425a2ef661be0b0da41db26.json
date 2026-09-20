@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "علمت اللغة العربية في الجامعة لمدة سنتين وأتقنتها.",
+      "reasoning": "The sentence is grammatically well-formed Arabic, satisfying the requirement to write a correct sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "The sentence is grammatically correct and complete, meeting the task's requirement."
+}

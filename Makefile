@@ -1,4 +1,4 @@
-.PHONY: help install test db-up db-down db-reset db-test check api web
+.PHONY: help install test db-up db-down db-reset db-test check api web eval eval-live eval-baseline
 
 PG_CONTAINER := beehub-pg
 PG_IMAGE     := pgvector/pgvector:pg17
@@ -49,7 +49,17 @@ db-test: db-reset ## Run the position-gate / grounding SQL tests
 	@docker cp supabase/tests/gate_test.sql $(PG_CONTAINER):/tmp/ >/dev/null
 	@$(PSQL) -v ON_ERROR_STOP=1 -q -f /tmp/gate_test.sql
 
-check: test db-test ## Everything that runs for free
+eval: ## Replay evals from cassettes (free) — fails if a prompt changed
+	@$(VENV)/python evals/runner.py --suite all
+
+eval-live: ## Run evals against the real API and re-record (~$0.60)
+	@echo "This calls the Anthropic API and costs roughly \$$0.60."
+	@$(VENV)/python evals/runner.py --suite all --live --verbose
+
+eval-baseline: ## Re-record cassettes AND reset the baseline (deliberate reset)
+	@$(VENV)/python evals/runner.py --suite all --live --update-baseline --verbose
+
+check: test db-test eval ## Everything that runs for free
 	@echo "all checks passed"
 
 api: ## Run the API locally

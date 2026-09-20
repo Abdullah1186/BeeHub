@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "إن الولدُ مجتهد في دراسته.",
+      "reasoning": "The learner reproduced a grammatical Arabic sentence matching the source exactly."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 1.0,
+  "holistic_note": "You copied the source sentence correctly, which satisfies the task of writing a correct Arabic sentence."
+}

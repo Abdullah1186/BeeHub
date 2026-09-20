@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تكلما عن كتاب تاريخي جديد يخص الأندلس",
+      "reasoning": "The learner correctly identifies the topic as a new book about the history of Andalusia."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "واتفقا على قراءته سويا في المكتبة بعد الحصص",
+      "reasoning": "States they agreed to read it together in the library after classes, matching the source."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.95,
+  "holistic_note": "Excellent, clear paraphrase that fully conveys both key points with correct grammar."
+}

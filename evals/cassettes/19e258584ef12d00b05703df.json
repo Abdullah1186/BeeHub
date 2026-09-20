@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "وهو كتاب تاريخ الأندلس",
+      "reasoning": "Identifies the subject of conversation as a book about the history of Andalusia, matching the source, though it omits that it was new and that Ahmad was carrying it."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "conveyed",
+      "evidence_span": "واتفقا على قراءته معا بعد الدروس في المكتبة",
+      "reasoning": "States they agreed to read it together after classes in the library, matching the source exactly in meaning."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "Good, clear answer that captures both key points accurately. You could have added that the book was new and that Ahmad was the one carrying it for full detail, but the core meaning is correctly conveyed with no grammatical errors."
+}

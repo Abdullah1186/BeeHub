@@ -1,0 +1,64 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "كتاب جديد عن تاريخ الأندلس",
+      "reasoning": "Correctly identifies the book's topic as the history of Andalusia."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "اتفقوا يقروه مع بعض في المكتبة",
+      "reasoning": "Mentions agreeing to read together in the library but omits that this would happen after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "lexis",
+      "subcategory": "register_mismatch",
+      "span": "حكوا",
+      "correction": "تحدثا",
+      "explanation": "حكى is a colloquial verb for 'talk'; MSA would use تحدث here.",
+      "severity": "moderate"
+    },
+    {
+      "category": "morphology",
+      "subcategory": "dual",
+      "span": "حكوا",
+      "correction": "تحدثا",
+      "explanation": "Since only two boys are the subject, the dual form تحدثا is required rather than the plural حكوا.",
+      "severity": "moderate"
+    },
+    {
+      "category": "morphology",
+      "subcategory": "dual",
+      "span": "اتفقوا",
+      "correction": "اتفقا",
+      "explanation": "The subject is two people (the boy and Ahmad), so the dual اتفقا is required instead of the plural اتفقوا.",
+      "severity": "moderate"
+    },
+    {
+      "category": "morphology",
+      "subcategory": "dual",
+      "span": "يقروه",
+      "correction": "يقرآه",
+      "explanation": "The verb should be in the dual form يقرآه to match the two subjects, and يقروه is also a colloquial spelling.",
+      "severity": "moderate"
+    },
+    {
+      "category": "lexis",
+      "subcategory": "register_mismatch",
+      "span": "مع بعض",
+      "correction": "معا",
+      "explanation": "مع بعض is a colloquial expression for 'together'; MSA uses معا.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "You correctly understood the topic of the book and the plan to read it together in the library, though you left out that this would happen after classes. Watch your use of dual forms (تحدثا، اتفقا، يقرآه) since two people are involved, and avoid colloquial expressions like حكى and مع بعض in formal Arabic."
+}

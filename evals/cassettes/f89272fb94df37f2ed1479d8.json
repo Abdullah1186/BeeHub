@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "قرأت الكتاب الولد الجديد.",
+      "reasoning": "The submitted sentence juxtaposes multiple noun phrases without any connecting structure, so it is not a grammatical Arabic sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "word_order",
+      "span": "الكتاب الولد الجديد",
+      "correction": "قرأ الولدُ الجديدُ الكتابَ",
+      "explanation": "Two definite noun phrases are placed in sequence with no verb or conjunction linking them, leaving the sentence structurally incoherent.",
+      "severity": "blocking"
+    }
+  ],
+  "model_comprehension_score": 0.05,
+  "holistic_note": "This is the same fragment given in the prompt, not a corrected sentence; it still lacks a coherent structure linking the noun phrases, so try rearranging it into a clear subject-verb-object sentence like قرأ الولدُ الجديدُ الكتابَ."
+}

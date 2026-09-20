@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "الطلاب يذهب إلى المدرسة كل صباح.",
+      "reasoning": "The sentence contains a subject-verb agreement error, so it is not a correct grammatical sentence as required."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "verb_conjugation",
+      "span": "يذهب",
+      "correction": "يذهبون",
+      "explanation": "With the subject fronted before the verb (topic-comment order), the verb must agree in number, so the plural subject الطلاب requires the plural verb يذهبون.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.2,
+  "holistic_note": "You were asked to write a correct sentence, but this one has a subject-verb agreement error: الطلاب (plural) needs يذهبون, not يذهب."
+}

@@ -1,0 +1,161 @@
+# Short-answer grading golden set (spec §5.8: "20+ short-answer pairs").
+#
+# Two halves, testing opposite failure modes:
+#   paraphrase/* — correct but differently worded. MUST score high.
+#                  A grader that punishes valid paraphrase teaches the learner
+#                  to parrot the source instead of understanding it.
+#   near_miss/*  — fluent, plausible, and WRONG. MUST score low.
+#                  A grader that accepts these makes every metric a lie.
+#
+# Engineered to have unambiguous answers, so grading them needs no LLM judge —
+# a judge would introduce a second unversioned prompt into the measurement loop.
+
+version: 1
+
+passage: >-
+  ذهب الولد إلى المدرسة في الصباح الباكر، وكان الطقس جميلا صافيا. وفي الطريق
+  التقى بصديقه القديم أحمد، الذي كان يحمل كتابا جديدا عن تاريخ الأندلس. تحدث
+  الصديقان عن الكتاب طويلا حتى وصلا إلى باب المدرسة، فاتفقا على أن يقرآه معا
+  بعد انتهاء الدروس في المكتبة.
+
+question: عن ماذا تحدث الولد وصديقه أحمد في الطريق، وماذا اتفقا أن يفعلا؟
+
+key_points:
+  - id: kp1
+    text: They talked about a new book Ahmad was carrying about the history of Andalusia.
+    source_quote: يحمل كتابا جديدا عن تاريخ الأندلس
+  - id: kp2
+    text: They agreed to read the book together in the library after classes ended.
+    source_quote: فاتفقا على أن يقرآه معا بعد انتهاء الدروس في المكتبة
+
+cases:
+  # --- valid paraphrase: expect final_score >= 0.8 ---
+  - id: paraphrase/synonyms
+    answer: تكلما عن كتاب تاريخي جديد يخص الأندلس، واتفقا على قراءته سويا في المكتبة بعد الحصص.
+    expect_min_score: 0.8
+    note: Every content word swapped for a synonym.
+
+  - id: paraphrase/reordered
+    answer: اتفقا أن يقرآ الكتاب معا في المكتبة بعد الدروس، وكان حديثهما عن تاريخ الأندلس.
+    expect_min_score: 0.8
+    note: Key points in reverse order.
+
+  - id: paraphrase/concise
+    answer: عن كتاب الأندلس، وسيقرآنه معا في المكتبة.
+    expect_min_score: 0.4
+    note: >-
+      Originally labelled "terse but complete" and expected >= 0.8. That was
+      wrong: the answer drops real detail from both key points — that the book
+      was new and carried by Ahmad, and that the reading was agreed for after
+      classes. `partially_conveyed` on both is the correct verdict, so ~0.4 is
+      the honest score. Kept as a case because it pins the boundary between
+      terse-and-complete and terse-and-lossy.
+
+  - id: paraphrase/verbose
+    answer: >-
+      تحدث الولد مع صديقه القديم أحمد عن الكتاب الجديد الذي كان يحمله، وهو كتاب
+      يتناول تاريخ الأندلس، ثم اتفقا فيما بينهما على أن يقرآ هذا الكتاب معا في
+      مكتبة المدرسة بعد أن تنتهي دروس ذلك اليوم.
+    expect_min_score: 0.8
+    note: Padded with detail from the passage. Extra correct detail is not error.
+
+  - id: paraphrase/different_syntax
+    answer: الكتاب الذي تحدثا عنه كان عن الأندلس، والقراءة المشتركة ستكون بالمكتبة بعد الدرس.
+    expect_min_score: 0.8
+    note: Nominal sentences where the source used verbal ones.
+
+  - id: paraphrase/minor_spelling
+    answer: تحدثا عن كتاب عن تاريخ الاندلس، واتفقا ان يقرآه معا في المكتبه بعد الدروس.
+    expect_min_score: 0.8
+    note: >-
+      Correct content with hamza and ta-marbuta slips. Minor orthography must
+      NOT reduce the score — this is the fair-to-paraphrase guarantee.
+
+  - id: paraphrase/english_loanword_free
+    answer: دار الحديث حول مؤلَّف حديث في تاريخ الأندلس، وتواعدا على مطالعته سويا بالمكتبة.
+    expect_min_score: 0.8
+    note: Higher register than the source. Still correct.
+
+  - id: paraphrase/pronoun_reference
+    answer: تحدثا عنه وهو كتاب تاريخ الأندلس، واتفقا على قراءته معا بعد الدروس في المكتبة.
+    expect_min_score: 0.8
+    note: Leans on pronouns; the referent is recoverable.
+
+  - id: paraphrase/partial_vocalisation
+    answer: تَحدثا عن كِتاب عن تاريخ الأندَلُس، واتفقا على قِراءته معاً في المَكتبة.
+    expect_min_score: 0.8
+    note: Partially vocalised. Harakat presence must not affect the grade.
+
+  - id: paraphrase/dialect_tinged
+    answer: حكوا عن كتاب جديد عن تاريخ الأندلس، واتفقوا يقروه مع بعض في المكتبة.
+    expect_min_score: 0.6
+    note: >-
+      Content fully conveyed in dialectal Arabic. Content credit should be high;
+      register errors belong in the tags, not in a content penalty. Lower bar
+      because register errors legitimately reduce the language half.
+
+  # --- near miss: expect final_score <= 0.4 ---
+  - id: near_miss/wrong_subject
+    answer: تحدثا عن كتاب في الرياضيات، واتفقا على أن يقرآه في البيت غدا.
+    expect_max_score: 0.4
+    note: Fluent and wrong on both points. Must be `contradicted`, not `absent`.
+
+  - id: near_miss/wrong_place
+    answer: تحدثا عن كتاب عن تاريخ الأندلس، واتفقا على قراءته في البيت بعد الدروس.
+    expect_max_score: 0.6
+    note: kp1 right, kp2 contradicted (house, not library). Partial credit only.
+
+  - id: near_miss/wrong_time
+    answer: تحدثا عن كتاب عن تاريخ الأندلس، واتفقا على قراءته في المكتبة قبل بدء الدروس.
+    expect_max_score: 0.6
+    note: Reverses the timing. "before" is not "after".
+
+  - id: near_miss/plausible_invention
+    answer: تحدثا عن كتاب عن تاريخ الأندلس، واتفقا على شرائه من المكتبة بعد الدروس.
+    expect_max_score: 0.6
+    note: >-
+      One word changed — reading becomes buying, and مكتبة shifts from library
+      to bookshop. The subtlest case in the set.
+
+  - id: near_miss/negation_flip
+    answer: لم يتحدثا عن الكتاب، ولم يتفقا على قراءته.
+    expect_max_score: 0.4
+    note: Negates both key points.
+
+  - id: near_miss/wrong_person
+    answer: تحدث الولد مع معلمه عن كتاب تاريخ الأندلس، واتفقا على قراءته في المكتبة.
+    expect_max_score: 0.6
+    note: Teacher instead of the friend Ahmad.
+
+  - id: near_miss/topic_drift
+    answer: كان الطقس جميلا صافيا في الصباح الباكر عندما ذهب الولد إلى المدرسة.
+    expect_max_score: 0.4
+    note: True about the passage, but answers a different question. Off-topic.
+
+  - id: near_miss/half_right_half_invented
+    answer: تحدثا عن كتاب عن تاريخ الأندلس، واتفقا على كتابة بحث عنه للمعلم.
+    expect_max_score: 0.6
+    note: kp1 conveyed, kp2 replaced with an invention.
+
+  - id: near_miss/vague_nonanswer
+    answer: تحدثا عن أشياء كثيرة واتفقا على شيء ما.
+    expect_max_score: 0.4
+    note: Contentless. Must not earn credit for gesturing at the shape of an answer.
+
+  - id: near_miss/copies_question
+    answer: عن ماذا تحدث الولد وصديقه أحمد في الطريق، وماذا اتفقا أن يفعلا؟
+    expect_max_score: 0.4
+    note: Echoes the question back. A classic way to game a lenient grader.
+
+  # --- ungradable ---
+  - id: ungradable/blank
+    answer: ""
+    expect_gradable: false
+    note: Must refuse rather than invent a mark (§7).
+
+  - id: ungradable/wrong_language
+    answer: They talked about a history book and agreed to read it together.
+    expect_max_score: 0.4
+    note: >-
+      Content is correct but the answer is in English where Arabic was required.
+      Either ungradable or heavily penalised; must not score full marks.

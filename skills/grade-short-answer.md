@@ -1,6 +1,6 @@
 ---
 id: grade-short-answer
-version: 1
+version: 2
 pool: judgment
 output_model: app.schemas.grading.ShortAnswerGrade
 includes:
@@ -36,6 +36,29 @@ For each key point, return exactly one status:
 
 **`contradicted` is not `absent`.** Saying the opposite is a comprehension
 failure worth surfacing; saying nothing is an omission. Keep them distinct.
+
+**A wrong detail is `contradicted`, not `partially_conveyed`.** This is the
+distinction that decides whether the score means anything.
+
+`partially_conveyed` is for an answer that is *incomplete* — it gestures at the
+fact, or states part of it, and everything it does say is true of the source.
+
+`contradicted` is for an answer that *asserts something the source denies*, even
+when the rest of the sentence is correct. Getting the book right and the place
+wrong is not partial understanding of the place; it is a false statement about
+the place, sitting next to a true one.
+
+Ask: **does the answer state something that conflicts with the source?** If yes,
+the verdict is `contradicted`, however much else the learner got right. The other
+key points still earn their own credit — a wrong detail does not poison them.
+
+- Source `في المكتبة`, answer `في البيت` → **`contradicted`** (a different place
+  is asserted), not `partially_conveyed`.
+- Source `بعد الدروس`, answer `بعد انتهاء اليوم` → `conveyed` (same time, other
+  words).
+- Source `بعد الدروس`, answer `قبل الدروس` → **`contradicted`** (reversed).
+- Source `كتاب عن تاريخ الأندلس`, answer `كتاب` → `partially_conveyed`
+  (incomplete, but nothing false is asserted).
 
 ### Paraphrase is not error
 

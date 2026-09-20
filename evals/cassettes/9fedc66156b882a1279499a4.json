@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "contradicted",
+      "evidence_span": "تحدثا عن كتاب في الرياضيات",
+      "reasoning": "The learner states the book was about mathematics, whereas the source says it was about the history of Andalusia."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "contradicted",
+      "evidence_span": "واتفقا على أن يقرآه في البيت غدا",
+      "reasoning": "The learner says they agreed to read it at home tomorrow, but the source says they agreed to read it together in the library after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.05,
+  "holistic_note": "Your Arabic sentence is grammatically correct, but it reverses key facts from the story: the book was about the history of Andalusia, not mathematics, and the boys agreed to read it in the library after school, not at home tomorrow."
+}

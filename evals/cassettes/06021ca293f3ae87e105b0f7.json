@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "لا ذهبت إلى المدرسة أمس بسبب المرض.",
+      "reasoning": "The sentence is not grammatically correct because لا cannot negate a past-tense verb; لم should be used instead."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "negation",
+      "span": "لا ذهبت",
+      "correction": "لم أذهب",
+      "explanation": "لا cannot negate a past-tense verb in MSA; لم with the jussive mood is required instead.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.2,
+  "holistic_note": "The task asked for a correct sentence, but the one you wrote uses لا to negate a past-tense verb, which is not permitted in MSA — use لم with the jussive form instead, e.g. لم أذهب إلى المدرسة أمس بسبب المرض."
+}

@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": null,
+      "reasoning": "The answer does not mention the book, Ahmad, or Andalusia at all."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "absent",
+      "evidence_span": null,
+      "reasoning": "No mention of any agreement to read together in the library."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": true,
+  "language_errors": [],
+  "model_comprehension_score": 0.0,
+  "holistic_note": "Your answer only restates a detail about the weather from earlier in the passage and does not address what the boy and Ahmad discussed or agreed to do. Try to focus on the specific question asked."
+}

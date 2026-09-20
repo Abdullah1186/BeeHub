@@ -1,0 +1,25 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "contradicted",
+      "evidence_span": "تحدث الولد مع معلمه عن كتاب تاريخ الأندلس",
+      "reasoning": "The learner says he spoke with his teacher, but the source says he spoke with his friend Ahmad who was carrying the book."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "اتفقا على قراءته في المكتبة",
+      "reasoning": "Conveys reading together in the library but omits that this was to happen after classes ended."
+    }
+  ],
+  "unsupported_claims": [
+    "The learner claims the boy spoke with his teacher, which is not in the source and contradicts it."
+  ],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.4,
+  "holistic_note": "You correctly identified the book's topic and the plan to read it in the library, but you mistakenly said he spoke with his teacher instead of his friend Ahmad, and you left out that this was to happen after classes ended."
+}

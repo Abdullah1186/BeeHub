@@ -1,0 +1,23 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "تَحدثا عن كِتاب عن تاريخ الأندَلُس",
+      "reasoning": "States they talked about a book on the history of Andalusia, matching the source's topic even though 'new' is omitted."
+    },
+    {
+      "key_point_id": "kp2",
+      "status": "partially_conveyed",
+      "evidence_span": "واتفقا على قِراءته معاً في المَكتبة",
+      "reasoning": "Conveys they agreed to read it together in the library but omits that this was to happen after classes ended."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.85,
+  "holistic_note": "Good comprehension of the main topic and agreement; just add the detail that they planned to read it after classes finished. Your Arabic is grammatically correct."
+}

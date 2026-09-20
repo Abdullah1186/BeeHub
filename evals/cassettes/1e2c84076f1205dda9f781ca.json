@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "رأيت الولدُ في الشارع أمس.",
+      "reasoning": "The sentence contains a case-marking error (الولدُ should be الولدَ as the object of رأيت), so it does not satisfy the requirement of being a grammatically correct sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "case_marking",
+      "subcategory": "accusative",
+      "span": "الولدُ",
+      "correction": "الولدَ",
+      "explanation": "الولد is the direct object of رأيت and must take the accusative case ending, not the nominative.",
+      "severity": "blocking"
+    }
+  ],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "The sentence you wrote is not grammatically correct: الولد is the object of رأيت and needs the accusative ending (الولدَ), not the nominative (الولدُ)."
+}
