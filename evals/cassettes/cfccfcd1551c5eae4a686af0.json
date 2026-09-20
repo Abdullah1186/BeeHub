@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "زرت المدينة الكبير في الصيف الماضي",
+      "reasoning": "The learner produced a coherent sentence in MSA but with an adjective agreement error."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "adjective_agreement",
+      "span": "المدينة الكبير",
+      "correction": "المدينة الكبيرة",
+      "explanation": "The adjective must agree in gender with the feminine noun المدينة, so it should be الكبيرة.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good sentence structure and clear meaning, but remember to match adjective gender with the noun: المدينة الكبيرة, not الكبير."
+}

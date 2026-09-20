@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "أخذت حماما قبل الذهاب إلى العمل.",
+      "reasoning": "The learner produced a grammatically well-formed Arabic sentence with correct verb conjugation, agreement, and syntax."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "lexis",
+      "subcategory": "calque",
+      "span": "أخذت حماما",
+      "correction": "استحممت",
+      "explanation": "This is a word-for-word translation of the English idiom 'took a bath'; MSA uses the single verb استحمّ.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.8,
+  "holistic_note": "Your sentence is grammatically correct and clear, but 'أخذت حماماً' is a direct translation of the English expression — in Arabic you'd simply say استحممت."
+}

@@ -6,7 +6,7 @@
       "key_point_id": "kp1",
       "status": "partially_conveyed",
       "evidence_span": "الولدان ذهبوا إلى الحديقة معا.",
-      "reasoning": "The learner wrote a sentence in MSA, but it contains a dual/verb agreement error, so it is not fully grammatical."
+      "reasoning": "A sentence was produced but it contains a dual/verb agreement error, so it is not fully grammatical."
     }
   ],
   "unsupported_claims": [],
@@ -15,12 +15,12 @@
     {
       "category": "morphology",
       "subcategory": "dual",
-      "span": "الولدان ذهبوا",
-      "correction": "الولدان ذهبا",
-      "explanation": "The dual subject الولدان requires the dual verb form ذهبا, not the plural ذهبوا.",
+      "span": "ذهبوا",
+      "correction": "ذهبا",
+      "explanation": "The subject الولدان is dual, so the verb must be in the dual form ذهبا, not the plural ذهبوا.",
       "severity": "moderate"
     }
   ],
   "model_comprehension_score": 0.6,
-  "holistic_note": "Good attempt at a simple sentence, but remember that a dual subject takes a dual verb: الولدان ذهبا، not ذهبوا."
+  "holistic_note": "Good attempt at a sentence, but remember that a dual subject like الولدان requires a dual verb ذهبا rather than the plural ذهبوا."
 }

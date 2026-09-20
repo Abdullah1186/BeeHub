@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "وضعت الكتاب علي الطاولة.",
+      "reasoning": "The learner produced a well-formed, meaningful Arabic sentence with only a minor spelling slip."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "alif_maqsura",
+      "span": "علي",
+      "correction": "على",
+      "explanation": "The preposition 'ala' should be spelled with alif maqsura (على) not ya (علي), which is a different word meaning 'my/upon me' or the name Ali.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.95,
+  "holistic_note": "Good, clear sentence with correct structure and meaning. Just watch the spelling of على (with alif maqsura) versus علي."
+}

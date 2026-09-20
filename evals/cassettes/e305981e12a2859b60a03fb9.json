@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "رأيت الولدُ في الشارع أمس.",
+      "reasoning": "The learner produced a coherent sentence but it contains a case-marking error, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "case_marking",
+      "subcategory": "accusative",
+      "span": "الولدُ",
+      "correction": "الولدَ",
+      "explanation": "The direct object of رأيت must take the accusative case marker, not the nominative.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good sentence structure and vocabulary, but remember that the direct object after a verb like رأيت must be in the accusative case: رأيت الولدَ، not الولدُ."
+}

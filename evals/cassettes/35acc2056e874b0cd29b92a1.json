@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "قرات الكتاب كاملا في يوم واحد.",
+      "reasoning": "The learner produced a coherent, grammatically structured Arabic sentence with correct word order and case usage aside from a minor spelling slip."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "قرات",
+      "correction": "قرأت",
+      "explanation": "The hamza on the alif is missing in the verb قرأت.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.85,
+  "holistic_note": "Good, clear sentence with correct structure and accusative usage; just fix the missing hamza in قرأت."
+}

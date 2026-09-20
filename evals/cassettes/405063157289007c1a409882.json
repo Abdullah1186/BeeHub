@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "إن الولدُ مجتهد في دراسته.",
+      "reasoning": "The sentence is mostly well-formed and meaningful but contains a case-marking error after إنّ, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "case_marking",
+      "subcategory": "accusative",
+      "span": "الولدُ",
+      "correction": "الولدَ",
+      "explanation": "The noun following إنّ (اسم إنّ) must be in the accusative case, not nominative.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.75,
+  "holistic_note": "Good sentence overall, but remember that إنّ requires its noun to take the accusative case: الولدَ, not الولدُ."
+}

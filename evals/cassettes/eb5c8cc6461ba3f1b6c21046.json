@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "احمد طالب مجتهد في المدرسة.",
+      "reasoning": "The learner produced a grammatically well-formed Arabic sentence with subject-predicate agreement."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "hamza",
+      "span": "احمد",
+      "correction": "أحمد",
+      "explanation": "The proper name requires an initial hamza seat on alif, written أحمد rather than احمد.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "A clear, grammatical sentence with correct agreement; just remember the hamza on أحمد."
+}

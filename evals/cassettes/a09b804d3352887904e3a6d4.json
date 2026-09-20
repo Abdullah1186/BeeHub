@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "لم أذهب غدا إلى الحفلة.",
+      "reasoning": "The learner produced a real Arabic sentence, but it contains a tense/negation mismatch that makes it not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "negation",
+      "span": "لم أذهب غدا",
+      "correction": "لن أذهب غدا",
+      "explanation": "لم negates the past (with jussive), but غدا 'tomorrow' refers to the future, so لن should be used instead.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good sentence structure overall, but لم cannot combine with a future time word like غدا — use لن أذهب غدا instead to correctly negate a future action."
+}

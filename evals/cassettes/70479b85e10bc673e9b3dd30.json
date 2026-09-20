@@ -4,9 +4,9 @@
   "key_points": [
     {
       "key_point_id": "kp1",
-      "status": "partially_conveyed",
+      "status": "contradicted",
       "evidence_span": "أمس أذهب إلى المدرسة مبكرا",
-      "reasoning": "The learner produced a sentence but it contains a tense mismatch between the past-time marker and the verb, so it is not fully grammatical."
+      "reasoning": "The sentence mixes the past-time adverb أمس with the present-tense verb أذهب, producing an ungrammatical sentence rather than the required correct one."
     }
   ],
   "unsupported_claims": [],
@@ -15,12 +15,12 @@
     {
       "category": "morphology",
       "subcategory": "verb_conjugation",
-      "span": "أذهب",
-      "correction": "ذهبت",
-      "explanation": "The time adverb أمس (yesterday) requires a past-tense verb, but the present-tense form أذهب was used.",
-      "severity": "moderate"
+      "span": "أمس أذهب",
+      "correction": "أمس ذهبت",
+      "explanation": "The time adverb أمس (yesterday) requires a past-tense verb, but the present-tense أذهب was used.",
+      "severity": "blocking"
     }
   ],
-  "model_comprehension_score": 0.6,
-  "holistic_note": "You wrote a clear sentence, but أمس (yesterday) needs a past-tense verb: أمس ذهبتُ إلى المدرسة مبكراً."
+  "model_comprehension_score": 0.2,
+  "holistic_note": "The sentence structure is simple and clear, but there's a tense mismatch: أمس (yesterday) needs a past-tense verb, so it should be ذهبتُ أمس إلى المدرسة مبكراً."
 }

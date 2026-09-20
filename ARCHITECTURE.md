@@ -294,6 +294,17 @@ The risk this accepts: §5.3 put Opus on error tagging because Arabic morphology
 is hard and bad tags poison the metrics. The tagging eval's **false-positive rate
 on correct sentences** is the tripwire.
 
+**Measured, and the decision holds.** Tagging scores 34/40 (85%) with a
+**0% false-positive rate** — Sonnet did not invent a single error across 8
+correct sentences, including fully vocalised text, a three-term iḍāfa chain,
+correct dual agreement, and the passive. That was the failure mode that would
+have quietly corrupted the metrics tab, review queue, and writing CEFR.
+
+Of the 6 failures, 3 are defensible alternative categorisations rather than
+misses — `فاطمة ذهب` tagged `agreement/gender` instead of
+`morphology/verb_conjugation` is an honest reading of the same error. Only 3 are
+true misses (conditional mood, one register slip, one hamza seat).
+
 ---
 
 ## 5. The evals harness

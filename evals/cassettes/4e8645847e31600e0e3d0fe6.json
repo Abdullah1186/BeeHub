@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "ذهبت إلى المدرسةُ في الصباح.",
+      "reasoning": "The learner produced a coherent, meaningful sentence but with a case-marking error after the preposition, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "case_marking",
+      "subcategory": "genitive",
+      "span": "المدرسةُ",
+      "correction": "المدرسةِ",
+      "explanation": "The noun following the preposition إلى must be in the genitive case, not nominative.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Your sentence is clear and meaningful, but remember that nouns following prepositions like إلى take the genitive case (المدرسةِ), not the nominative (المدرسةُ)."
+}

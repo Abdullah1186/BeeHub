@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "الكتابان الجديد على الطاولة",
+      "reasoning": "The learner produced a coherent, meaningful sentence but the adjective fails to agree in number with the dual noun, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "morphology",
+      "subcategory": "dual",
+      "span": "الجديد",
+      "correction": "الجديدان",
+      "explanation": "The adjective must agree in dual number with the dual noun الكتابان.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good sentence structure and vocabulary, but remember that adjectives must match dual nouns: الكتابان الجديدان, not الجديد."
+}

@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "أكلت الماء بعد الرياضة مباشرة.",
+      "reasoning": "The sentence is grammatically well-formed in MSA (correct conjugation, agreement, and structure), satisfying the requirement to produce a grammatical sentence, despite an odd word choice."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "lexis",
+      "subcategory": "wrong_word",
+      "span": "أكلت الماء",
+      "correction": "شربت الماء",
+      "explanation": "The verb أكل (to eat) is used with الماء (water), which is normally drunk (شرب), not eaten.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Your sentence is grammatically correct, but أكلت الماء doesn't make sense — water is drunk (شربت), not eaten. Otherwise the structure and conjugation are fine."
+}

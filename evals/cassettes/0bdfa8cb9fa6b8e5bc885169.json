@@ -6,7 +6,7 @@
       "key_point_id": "kp1",
       "status": "partially_conveyed",
       "evidence_span": "ذهبت إلى مكتوب البريد لإرسال الرسالة",
-      "reasoning": "The sentence is largely well-formed but contains a morphological error (مكتوب for مكتب), so it is not fully grammatical."
+      "reasoning": "The sentence is structurally sound and mostly grammatical, but contains a derived-noun error (مكتوب instead of مكتب) that undermines full correctness."
     }
   ],
   "unsupported_claims": [],
@@ -15,12 +15,12 @@
     {
       "category": "morphology",
       "subcategory": "derived_noun",
-      "span": "مكتوب",
-      "correction": "مكتب",
-      "explanation": "The noun of place pattern maf'al (مكتب 'office') was replaced with the passive participle مكتوب ('written/letter'), confusing the intended meaning.",
+      "span": "مكتوب البريد",
+      "correction": "مكتب البريد",
+      "explanation": "The noun of place 'post office' should be مكتب (place-noun pattern) not مكتوب (passive participle 'written').",
       "severity": "moderate"
     }
   ],
-  "model_comprehension_score": 0.75,
-  "holistic_note": "Good sentence structure overall, but مكتوب البريد should be مكتب البريد (the post office); مكتوب means 'letter' or 'written', not 'office'."
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good sentence structure overall, but you used مكتوب (something written) instead of مكتب (office) — 'مكتب البريد' is the correct term for post office."
 }

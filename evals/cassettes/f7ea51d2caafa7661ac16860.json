@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "عندي ثلاثة كتاب في الحقيبة.",
+      "reasoning": "The learner produced a coherent Arabic sentence but it contains a number-agreement error, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "agreement",
+      "subcategory": "number",
+      "span": "ثلاثة كتاب",
+      "correction": "ثلاثة كتب",
+      "explanation": "Numbers three through ten require the counted noun to be plural, but 'كتاب' is singular.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good clear sentence overall, but remember that numbers 3–10 take a plural noun: ثلاثة كتب not ثلاثة كتاب."
+}

@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "لم يحضر الطالب الدرس أمس، ولن يحضر غدا أيضا.",
+      "reasoning": "The learner produced a grammatically correct MSA sentence with proper negation and verb forms."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.95,
+  "holistic_note": "Well-formed sentence with correct use of لم and لن for past and future negation."
+}

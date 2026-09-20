@@ -1,0 +1,34 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "absent",
+      "evidence_span": "قرأت الكتاب الولد الجديد.",
+      "reasoning": "The word order and verb agreement are scrambled, so the sentence is not grammatically correct Arabic."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "word_order",
+      "span": "قرأت الكتاب الولد الجديد",
+      "correction": "قرأ الولد الكتاب الجديد",
+      "explanation": "The verb, subject, and object are arranged in an order MSA does not allow, obscuring who read what.",
+      "severity": "blocking"
+    },
+    {
+      "category": "morphology",
+      "subcategory": "verb_conjugation",
+      "span": "قرأت",
+      "correction": "قرأ",
+      "explanation": "The verb is conjugated for first person singular but the intended subject الولد is third person masculine singular.",
+      "severity": "blocking"
+    }
+  ],
+  "model_comprehension_score": 0.1,
+  "holistic_note": "The sentence is not grammatically correct: the verb form doesn't match the subject and the word order is scrambled. Try: قرأ الولد الكتاب الجديد (The boy read the new book)."
+}

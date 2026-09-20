@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "لا ذهبت إلى المدرسة أمس بسبب المرض.",
+      "reasoning": "The sentence is otherwise well-formed and meaningful, but the negation particle لا cannot be used with the past tense, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "syntax",
+      "subcategory": "negation",
+      "span": "لا ذهبت",
+      "correction": "لم أذهب",
+      "explanation": "لا cannot negate a past-tense verb in MSA; لم with the jussive or ما with the past should be used instead.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Your sentence is clear and meaningful, but لا cannot negate the past tense — use لم أذهب or ما ذهبت instead."
+}

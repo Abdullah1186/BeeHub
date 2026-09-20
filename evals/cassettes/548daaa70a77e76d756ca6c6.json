@@ -1,0 +1,34 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "contradicted",
+      "evidence_span": "الكتب جميلون ومفيدون للقارئ",
+      "reasoning": "The sentence is not grammatically correct because non-human plurals like الكتب require feminine singular agreement, not masculine plural."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "agreement",
+      "subcategory": "gender",
+      "span": "جميلون",
+      "correction": "جميلة",
+      "explanation": "Non-human plural nouns like الكتب take feminine singular adjective agreement, not masculine sound plural.",
+      "severity": "moderate"
+    },
+    {
+      "category": "agreement",
+      "subcategory": "gender",
+      "span": "مفيدون",
+      "correction": "مفيدة",
+      "explanation": "Non-human plural nouns like الكتب take feminine singular adjective agreement, not masculine sound plural.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.3,
+  "holistic_note": "The sentence is understandable but contains a grammatical agreement error: non-human plurals like الكتب should be described with feminine singular adjectives, e.g. الكتب جميلة ومفيدة للقارئ."
+}

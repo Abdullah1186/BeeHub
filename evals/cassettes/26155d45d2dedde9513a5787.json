@@ -1,0 +1,50 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "أحب القراءة و لا أحب الرياضة و أحب الموسيقى و أكره السباحة.",
+      "reasoning": "The learner produced a coherent, grammatically well-formed Arabic sentence expressing likes and dislikes."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "orthography",
+      "subcategory": "spelling",
+      "span": "و لا",
+      "correction": "ولا",
+      "explanation": "The conjunction و should be attached directly to the following word rather than written as a separate token.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "spelling",
+      "span": "و أحب",
+      "correction": "وأحب",
+      "explanation": "The conjunction و should be attached directly to the following word rather than written as a separate token.",
+      "severity": "minor"
+    },
+    {
+      "category": "orthography",
+      "subcategory": "spelling",
+      "span": "و أكره",
+      "correction": "وأكره",
+      "explanation": "The conjunction و should be attached directly to the following word rather than written as a separate token.",
+      "severity": "minor"
+    },
+    {
+      "category": "discourse",
+      "subcategory": "connectives",
+      "span": "أحب القراءة و لا أحب الرياضة و أحب الموسيقى و أكره السباحة.",
+      "correction": "أحب القراءة ولا أحب الرياضة، وأحب الموسيقى لكنّي أكره السباحة.",
+      "explanation": "Repeated use of و as the sole connective throughout the sentence makes it feel like a simple list rather than a varied statement.",
+      "severity": "minor"
+    }
+  ],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "Your sentence is grammatically correct and clearly conveys your likes and dislikes. Remember to attach the conjunction و directly to the following word (e.g., ولا, وأحب) rather than writing it separately, and consider varying your connectives (e.g., using لكن) for a more natural flow."
+}

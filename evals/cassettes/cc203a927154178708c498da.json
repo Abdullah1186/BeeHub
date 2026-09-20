@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "سكنت في البيت كبير قرب البحر.",
+      "reasoning": "The sentence is mostly well-formed but contains a definiteness agreement error between the noun and adjective, so it is not fully grammatical."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "agreement",
+      "subcategory": "definiteness",
+      "span": "البيت كبير",
+      "correction": "البيت الكبير",
+      "explanation": "The definite noun البيت requires a definite adjective الكبير, but the indefinite كبير was used.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good attempt at a simple descriptive sentence, but remember that adjectives must match the definiteness of the noun they describe: البيت الكبير, not البيت كبير."
+}

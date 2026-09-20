@@ -1,0 +1,17 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "conveyed",
+      "evidence_span": "قرأت مقدمة كتاب تاريخ الأندلس في المكتبة.",
+      "reasoning": "The learner produced a grammatically correct MSA sentence with proper agreement and case marking."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [],
+  "model_comprehension_score": 0.9,
+  "holistic_note": "Well-formed sentence with correct grammar and clear meaning."
+}

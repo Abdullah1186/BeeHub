@@ -6,7 +6,7 @@
       "key_point_id": "kp1",
       "status": "partially_conveyed",
       "evidence_span": "قرأت ثلاثة كتابات في الأسبوع الماضي.",
-      "reasoning": "The sentence is largely well-formed but contains a morphological error (wrong plural) that keeps it from being fully correct."
+      "reasoning": "The sentence is mostly grammatical and comprehensible but contains a plural form error, so it does not fully meet the 'correct Arabic' requirement."
     }
   ],
   "unsupported_claims": [],
@@ -17,10 +17,10 @@
       "subcategory": "broken_plural",
       "span": "كتابات",
       "correction": "كتب",
-      "explanation": "كتابات is not the correct broken plural of كتاب; the correct plural is كتب.",
+      "explanation": "The correct broken plural of كتاب (book) is كتب, not كتابات, which instead means 'writings'.",
       "severity": "moderate"
     }
   ],
   "model_comprehension_score": 0.7,
-  "holistic_note": "Good sentence structure and correct number agreement, but the plural of كتاب is كتب, not كتابات (which means 'writings')."
+  "holistic_note": "Good sentence structure and clear meaning, but the plural of كتاب should be كتب rather than كتابات."
 }

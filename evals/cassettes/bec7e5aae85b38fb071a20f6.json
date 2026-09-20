@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "contradicted",
+      "evidence_span": "إيه الأخبار اليوم يا أستاذ؟",
+      "reasoning": "The sentence uses the Egyptian colloquial word 'إيه' instead of Modern Standard Arabic, so it does not satisfy the requirement to write a correct Fus-ha sentence."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "lexis",
+      "subcategory": "register_mismatch",
+      "span": "إيه",
+      "correction": "ما",
+      "explanation": "إيه is a colloquial Egyptian interrogative; MSA requires ما or ماذا.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.2,
+  "holistic_note": "Your sentence is understandable but uses colloquial Arabic (إيه) rather than the Modern Standard Arabic required by the task; try 'ما الأخبار اليوم يا أستاذ؟' instead."
+}

@@ -1,0 +1,26 @@
+{
+  "gradable": true,
+  "ungradable_reason": null,
+  "key_points": [
+    {
+      "key_point_id": "kp1",
+      "status": "partially_conveyed",
+      "evidence_span": "هذا المدرسة كبيرة وجميلة.",
+      "reasoning": "The sentence is mostly grammatical and coherent but contains a demonstrative-gender agreement error, so it is not fully correct."
+    }
+  ],
+  "unsupported_claims": [],
+  "is_off_topic": false,
+  "language_errors": [
+    {
+      "category": "agreement",
+      "subcategory": "gender",
+      "span": "هذا المدرسة",
+      "correction": "هذه المدرسة",
+      "explanation": "The demonstrative هذا is masculine but المدرسة is feminine, so هذه is required.",
+      "severity": "moderate"
+    }
+  ],
+  "model_comprehension_score": 0.6,
+  "holistic_note": "Good simple sentence with correct vocabulary and adjective agreement, but remember to use هذه with feminine nouns like المدرسة instead of هذا."
+}
