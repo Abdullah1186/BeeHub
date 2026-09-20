@@ -184,3 +184,18 @@ class VocabItem(BaseModel):
 class VocabExtraction(BaseModel):
     # 12 to match the skill's cap, with headroom.
     items: list[VocabItem] = Field(default_factory=list, max_length=20)
+
+
+class WordTranslation(BaseModel):
+    """One word's meaning in context. Output of translate-word."""
+
+    translatable: bool = Field(
+        description="False when the word is damaged or not Arabic; never guess."
+    )
+    translation: str = Field(description="Concise English gloss, flashcard-sized.")
+    lemma: str = Field(description="Dictionary form.")
+    root: str | None = Field(default=None, description="Root if clear, else null.")
+    pos: Literal["noun", "verb", "adjective", "adverb", "particle", "phrase"]
+    note: str | None = Field(
+        default=None, max_length=200, description="One short remark, if useful."
+    )

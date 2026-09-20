@@ -206,6 +206,40 @@ def get_resource(
     return ResourceOut(**result.data[0])
 
 
+class ResourceUpdate(BaseModel):
+    """Editable metadata. The file itself is immutable once uploaded."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    author: str | None = Field(default=None, max_length=300)
+    level_hint: CEFRLevel | None = None
+
+
+@router.patch("/{resource_id}", response_model=ResourceOut)
+def update_resource(
+    resource_id: str,
+    body: ResourceUpdate,
+    user: AuthenticatedUser = Depends(current_user),
+) -> ResourceOut:
+    """Rename a resource, or correct its author and level.
+
+    Titles come from the uploaded filename by default, which for an Arabic PDF
+    is often a mangled transliteration — لا_شيء_ي_عجبني rather than the book's
+    actual name. Worth being able to fix.
+    """
+    client = user_client(user.token)
+    payload = body.model_dump(exclude_none=True)
+    if not payload:
+        return get_resource(resource_id, user)
+
+    result = (
+        client.table("resources").update(payload).eq("id", resource_id).execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+    log.info("resource_updated", resource_id=resource_id, fields=sorted(payload))
+    return ResourceOut(**result.data[0])
+
+
 @router.get("/{resource_id}/file")
 def get_file_url(
     resource_id: str, user: AuthenticatedUser = Depends(current_user)

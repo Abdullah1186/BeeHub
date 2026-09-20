@@ -7,7 +7,8 @@ import { Learning } from "./components/Learning";
 import { Metrics } from "./components/Metrics";
 import { Resources } from "./components/Resources";
 import { Settings } from "./components/Settings";
-import { Button, Wordmark } from "./ui";
+import { api, type Overview, type UserSettings } from "./lib/api";
+import { Button, HealthBar, Wordmark } from "./ui";
 
 /** The spec's §2 tabs. Review lives inside Learning as the flashcard deck. */
 const TABS = [
@@ -26,6 +27,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("home");
   // Set when Home or Resources sends you into Learning for a specific book.
   const [focusResource, setFocusResource] = useState<string | null>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -35,6 +38,18 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // The strip refreshes when you change tab, which is when the numbers are
+  // most likely to have moved and the cheapest moment to fetch them.
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([api.overview(), api.settings()])
+      .then(([o, s]) => {
+        setOverview(o);
+        setSettings(s);
+      })
+      .catch(() => {});
+  }, [session, tab]);
 
   function goLearn(resourceId: string | null) {
     setFocusResource(resourceId);
@@ -95,6 +110,42 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">
+        {overview && (
+          <div className="mb-8">
+            <HealthBar
+              items={[
+                {
+                  label: "Reading",
+                  // Shows what you set until enough answers exist to measure
+                  // one, rather than a confident number off four answers.
+                  value:
+                    overview.estimates.find((e) => e.skill === "reading")?.cefr_level ??
+                    settings?.target_level ??
+                    "—",
+                  sub:
+                    overview.estimates.find((e) => e.skill === "reading")?.sufficient
+                      ? "measured"
+                      : "your setting",
+                },
+                {
+                  label: "Words today",
+                  value: `${Math.min(overview.vocab.total_reviews, settings?.daily_goal ?? 10)}/${settings?.daily_goal ?? 10}`,
+                  sub: `${overview.vocab.known} known of ${overview.vocab.total}`,
+                  progress:
+                    (settings?.daily_goal ?? 10) > 0
+                      ? overview.vocab.total_reviews / (settings?.daily_goal ?? 10)
+                      : 0,
+                },
+                {
+                  label: "Streak",
+                  value: String(overview.streak_days),
+                  sub: overview.streak_days === 1 ? "day" : "days",
+                  tone: "gold",
+                },
+              ]}
+            />
+          </div>
+        )}
         {tab === "home" && <Home onLearn={goLearn} onBrowse={() => setTab("resources")} />}
         {tab === "resources" && <Resources onPractice={goLearn} />}
         {tab === "learning" && (

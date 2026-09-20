@@ -1,16 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { api } from "../lib/api";
 import { Button, Skeleton } from "../ui";
 
+// Worker setup.
+//
 // Served from our own bundle rather than a CDN: the worker must match the
 // installed pdfjs exactly, and a CDN pinned elsewhere fails at render time.
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+//
+// `?url` rather than `new URL(..., import.meta.url)`. The latter resolves at
+// runtime against the module's own URL, which Vite rewrites differently per
+// browser target — it works in Chrome and can resolve to nothing in Safari,
+// where the failure surfaces as the whole view dying rather than a caught
+// error. `?url` is resolved by the bundler at build time, so every browser
+// gets the same concrete path.
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 /** `file` must be referentially stable.
  *
@@ -19,6 +28,30 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
  *  string is what keeps it to one load. */
 function useFile(url: string | null) {
   return useMemo(() => (url ? { url } : null), [url]);
+}
+
+/** A PDF failing to render must not take the surrounding view with it.
+ *
+ *  react-pdf throws during render on some worker failures, which React treats
+ *  as unrecoverable and unmounts the whole tree — the blank-page crash. A
+ *  boundary turns that into a message plus a working link. */
+class PdfBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("pdf render failed", error);
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }
 
 export function PdfCover({
@@ -55,19 +88,21 @@ export function PdfCover({
       aria-label="Open the PDF"
     >
       {file ? (
-        <Document
-          file={file}
-          loading={<Skeleton className="h-full w-full" />}
-          error={<div className="h-full w-full bg-[var(--surface-alt)]" />}
-          onLoadError={() => setFailed(true)}
-        >
-          <Page
-            pageNumber={1}
-            width={72}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        </Document>
+        <PdfBoundary fallback={<div className="h-full w-full bg-[var(--surface-alt)]" />}>
+          <Document
+            file={file}
+            loading={<Skeleton className="h-full w-full" />}
+            error={<div className="h-full w-full bg-[var(--surface-alt)]" />}
+            onLoadError={() => setFailed(true)}
+          >
+            <Page
+              pageNumber={1}
+              width={72}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          </Document>
+        </PdfBoundary>
       ) : (
         <Skeleton className="h-full w-full" />
       )}
@@ -176,6 +211,22 @@ export function PdfViewer({
             )}
           </div>
         ) : file ? (
+          <PdfBoundary
+            fallback={
+              <div className="mx-auto max-w-md text-center">
+                <p className="text-sm text-[var(--text-muted)]">
+                  This PDF could not be displayed here.
+                </p>
+                {url && (
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="secondary" size="sm" className="mt-3">
+                      Open it in a new tab
+                    </Button>
+                  </a>
+                )}
+              </div>
+            }
+          >
           <Document
             file={file}
             onLoadSuccess={({ numPages }) => setPages(numPages)}
@@ -193,6 +244,7 @@ export function PdfViewer({
               />
             </div>
           </Document>
+          </PdfBoundary>
         ) : (
           <Skeleton className="mx-auto h-[70vh] w-full max-w-2xl" />
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Resource } from "../lib/api";
 import { Badge, Button, Card, ConfirmButton, EmptyState, Input, Progress, SkeletonCard } from "../ui";
 import { PdfCover, PdfViewer } from "./PdfPreview";
@@ -29,6 +29,7 @@ export function Resources({ onPractice }: { onPractice: (id: string) => void }) 
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   async function load() {
     try {
@@ -47,6 +48,16 @@ export function Resources({ onPractice }: { onPractice: (id: string) => void }) 
 
   // Poll while the worker is still processing, so its progress appears without
   // a refresh. Stops as soon as nothing is in flight.
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return resources;
+    return resources.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        (r.author ?? "").toLowerCase().includes(q),
+    );
+  }, [resources, query]);
+
   const working = resources.some(
     (r) => r.ingest_status === "pending" || r.ingest_status === "extracting",
   );
@@ -59,13 +70,28 @@ export function Resources({ onPractice }: { onPractice: (id: string) => void }) 
   return (
     <div className="space-y-6 fade-up">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Resources</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
+        <h1 className="rule-gold text-2xl font-semibold tracking-tight">My library</h1>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
           Everything you practise from. Questions only ever come from pages you have read.
         </p>
       </div>
 
       <Upload onDone={load} />
+
+      {resources.length > 2 && (
+        <div className="flex items-center gap-3">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your library…"
+          />
+          {query && (
+            <span className="shrink-0 text-sm text-[var(--text-muted)]">
+              {filtered.length} of {resources.length}
+            </span>
+          )}
+        </div>
+      )}
 
       {error && (
         <Card className="border-[var(--bad-text)]/30 bg-[var(--bad-bg)] p-4">
@@ -78,14 +104,18 @@ export function Resources({ onPractice }: { onPractice: (id: string) => void }) 
           <SkeletonCard />
           <SkeletonCard />
         </div>
-      ) : resources.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <EmptyState
-          title="Nothing here yet"
-          body="Upload an Arabic PDF above. It is parsed, checked, and split into passages you can be questioned on."
+          title={query ? "Nothing matches" : "Nothing here yet"}
+          body={
+            query
+              ? "Try a different search."
+              : "Upload an Arabic PDF above. It is parsed, checked, and split into passages you can be questioned on."
+          }
         />
       ) : (
         <div className="space-y-3">
-          {resources.map((r) => (
+          {filtered.map((r) => (
             <ResourceRow key={r.id} resource={r} onPractice={onPractice} onChange={load} />
           ))}
         </div>
@@ -107,6 +137,8 @@ function ResourceRow({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [viewing, setViewing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(resource.title);
   const status = STATUS[resource.ingest_status] ?? STATUS.pending;
   const usable = resource.ingest_status === "ok" || resource.ingest_status === "degraded";
   const inFlight = resource.ingest_status === "pending" || resource.ingest_status === "extracting";
@@ -124,6 +156,17 @@ function ResourceRow({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function rename() {
+    const next = draftTitle.trim();
+    if (!next || next === resource.title) {
+      setEditing(false);
+      return;
+    }
+    await api.updateResource(resource.id, { title: next });
+    setEditing(false);
+    onChange();
   }
 
   async function remove() {
@@ -149,9 +192,40 @@ function ResourceRow({
             <PdfCover resourceId={resource.id} onOpen={() => setViewing(true)} />
           )}
           <div className="min-w-0">
-          <h3 className="arabic bidi-isolate truncate text-xl" dir="rtl" lang="ar">
-            {resource.title}
-          </h3>
+          {editing ? (
+            // Titles default to the uploaded filename, which for an Arabic PDF
+            // is usually a mangled transliteration worth correcting.
+            <Input
+              autoFocus
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onBlur={rename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") rename();
+                if (e.key === "Escape") {
+                  setDraftTitle(resource.title);
+                  setEditing(false);
+                }
+              }}
+              className="arabic text-xl"
+              dir="rtl"
+              lang="ar"
+            />
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              className="group flex items-center gap-2 text-left"
+              title="Rename"
+            >
+              <h3 className="arabic bidi-isolate truncate text-xl" dir="rtl" lang="ar">
+                {resource.title}
+              </h3>
+              <span className="shrink-0 text-xs text-[var(--text-subtle)] opacity-0
+                               transition-opacity group-hover:opacity-100">
+                edit
+              </span>
+            </button>
+          )}
           {resource.author && (
             <p className="arabic bidi-isolate truncate text-sm text-[var(--text-muted)]"
                dir="rtl" lang="ar">
@@ -196,7 +270,8 @@ function ResourceRow({
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+            <label className="flex items-center gap-2 whitespace-nowrap text-xs
+                              text-[var(--text-muted)]">
               Read to page
               <Input
                 type="number"
@@ -268,22 +343,34 @@ function Upload({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
     setBusy(true);
     setError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      await api.uploadPdf(file, title || file.name.replace(/\.pdf$/i, ""), position);
+      await api.uploadPdf(
+        file,
+        title || file.name.replace(/\.pdf$/i, ""),
+        position,
+        controller.signal,
+      );
       setTitle("");
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // An aborted upload is a choice, not a failure — say nothing.
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setBusy(false);
+      abortRef.current = null;
     }
   }
 
@@ -348,9 +435,33 @@ function Upload({ onDone }: { onDone: () => void }) {
               className="mt-1 w-24"
             />
           </label>
-          <Button type="submit" loading={busy}>
-            {busy ? "Uploading…" : "Upload"}
-          </Button>
+          {busy ? (
+            <div className="flex items-center gap-2">
+              <Button type="submit" loading disabled>Uploading…</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => abortRef.current?.abort()}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button type="submit">Upload</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setFile(null);
+                  setTitle("");
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

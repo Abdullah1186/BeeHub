@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, type Overview } from "../lib/api";
 import { Badge, Card, EmptyState, Skeleton } from "../ui";
 import { humanise } from "./Home";
@@ -6,9 +6,51 @@ import { humanise } from "./Home";
 /** Spec §2.5 — CEFR per skill with honest confidence, error breakdown,
  *  activity, and cost. Everything here is computed from recorded rows; no
  *  model call happens to render this page. */
+/** Which panels exist, and which are on by default.
+ *
+ *  A dashboard that shows everything shows nothing: the numbers a learner
+ *  cares about change week to week, so the panels are theirs to choose.
+ *  Speaking and writing are listed even though they have no data yet, so the
+ *  shape of what is coming is visible rather than hidden. */
+const PANELS = [
+  { id: "levels", label: "Levels", on: true },
+  { id: "activity", label: "Activity", on: true },
+  { id: "vocab", label: "Vocabulary", on: true },
+  { id: "errors", label: "Errors", on: true },
+  { id: "spend", label: "AI spend", on: false },
+] as const;
+
+type PanelId = (typeof PANELS)[number]["id"];
+
+const STORAGE_KEY = "beehub.metrics.panels";
+
 export function Metrics() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState<Set<PanelId>>(() => {
+    // Per-browser preference, so it survives a reload. Wrapped because
+    // storage throws in private windows and with site data blocked.
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return new Set(JSON.parse(saved) as PanelId[]);
+    } catch {
+      /* fall through to defaults */
+    }
+    return new Set(PANELS.filter((p) => p.on).map((p) => p.id));
+  });
+
+  function toggle(id: PanelId) {
+    const next = new Set(enabled);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setEnabled(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      /* preference is a convenience, not state the app depends on */
+    }
+  }
+
+  const show = useMemo(() => (id: PanelId) => enabled.has(id), [enabled]);
 
   useEffect(() => {
     api
@@ -44,15 +86,39 @@ export function Metrics() {
   return (
     <div className="space-y-8 fade-up">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Metrics</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
+        <h1 className="rule-gold text-2xl font-semibold tracking-tight">Metrics</h1>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
           {data.attempts_total} answers graded so far.
         </p>
+      </div>
+
+      {/* Panel switches. Chips rather than a settings menu: choosing what to
+          see is part of reading the dashboard, not a separate task. */}
+      <div className="flex flex-wrap gap-2">
+        {PANELS.map((p) => {
+          const on = show(p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => toggle(p.id)}
+              aria-pressed={on}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                on
+                  ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-text)]"
+                  : "border-[var(--border)] text-[var(--text-subtle)] hover:text-[var(--text)]"
+              }`}
+            >
+              {on ? "✓ " : ""}
+              {p.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Per-skill CEFR. Reading and writing are measured separately because
           they genuinely diverge — a learner can understand far more than they
           can produce (§2.5). */}
+      {show("levels") && (
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-[var(--text-muted)]">Level by skill</h2>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -89,7 +155,9 @@ export function Metrics() {
           ))}
         </div>
       </section>
+      )}
 
+      {show("activity") && (
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-[var(--text-muted)]">Activity</h2>
         <Card className="p-5">
@@ -112,8 +180,9 @@ export function Metrics() {
           </div>
         </Card>
       </section>
+      )}
 
-      {data.weak_spots.length > 0 && (
+      {show("errors") && data.weak_spots.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-[var(--text-muted)]">
             Where the errors are
@@ -185,21 +254,29 @@ export function Metrics() {
         </section>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Totals</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Small
-            label="Mean understanding"
-            value={
-              data.mean_content_score != null
-                ? `${Math.round(data.mean_content_score * 100)}%`
-                : "—"
-            }
-          />
-          {/* §7: you cannot optimise spend you cannot see. */}
-          <Small label="AI spend" value={`$${data.cost_usd_total.toFixed(2)}`} />
-        </div>
-      </section>
+      {show("spend") && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-[var(--text-muted)]">Totals</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Small
+              label="Mean understanding"
+              value={
+                data.mean_content_score != null
+                  ? `${Math.round(data.mean_content_score * 100)}%`
+                  : "—"
+              }
+            />
+            {/* §7: you cannot optimise spend you cannot see. */}
+            <Small label="AI spend" value={`$${data.cost_usd_total.toFixed(2)}`} />
+          </div>
+        </section>
+      )}
+
+      {enabled.size === 0 && (
+        <p className="py-8 text-center text-sm text-[var(--text-subtle)]">
+          Everything is switched off. Turn a panel on above.
+        </p>
+      )}
     </div>
   );
 }

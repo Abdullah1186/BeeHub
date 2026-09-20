@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type VocabCard } from "../lib/api";
-import { Badge, Button, Card, EmptyState, Input, Skeleton } from "../ui";
+import { Badge, Button, Card, EmptyState, Input, Skeleton, SparkleButton } from "../ui";
 
 /** Pick words out of the text yourself.
  *
@@ -17,6 +17,9 @@ export function WordPicker({ resourceId }: { resourceId: string }) {
   const [selected, setSelected] = useState<{ word: string; sentence: string } | null>(null);
   const [translation, setTranslation] = useState("");
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const [root, setRoot] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [added, setAdded] = useState<VocabCard[]>([]);
 
@@ -28,6 +31,26 @@ export function WordPicker({ resourceId }: { resourceId: string }) {
       .finally(() => setLoading(false));
   }, [resourceId]);
 
+  async function askAi() {
+    if (!selected) return;
+    setTranslating(true);
+    setAiNote(null);
+    try {
+      const r = await api.translateWord(selected.word, selected.sentence);
+      if (r.translatable) {
+        setTranslation(r.translation);
+        setRoot(r.root);
+        setAiNote(r.note);
+      } else {
+        setAiNote(r.note ?? "That does not look like a whole word.");
+      }
+    } catch (e) {
+      setAiNote(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTranslating(false);
+    }
+  }
+
   async function save() {
     if (!selected || !translation.trim()) return;
     setSaving(true);
@@ -38,10 +61,13 @@ export function WordPicker({ resourceId }: { resourceId: string }) {
         translation: translation.trim(),
         resource_id: resourceId,
         context_sentence: selected.sentence.slice(0, 900),
+        root: root ?? undefined,
       });
       setAdded([card, ...added]);
       setSelected(null);
       setTranslation("");
+      setRoot(null);
+      setAiNote(null);
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));
     } finally {
@@ -81,13 +107,26 @@ export function WordPicker({ resourceId }: { resourceId: string }) {
               Cancel
             </Button>
           </div>
-          <Input
-            autoFocus
-            value={translation}
-            onChange={(e) => setTranslation(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
-            placeholder="What does it mean?"
-          />
+          {/* The sparkle sits inside the field: the AI is filling in THIS box,
+              and a separate button beside it would read as a different action. */}
+          <div className="relative">
+            <Input
+              autoFocus
+              value={translation}
+              onChange={(e) => setTranslation(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+              placeholder="What does it mean?"
+              className="pr-10"
+            />
+            <SparkleButton
+              onClick={askAi}
+              loading={translating}
+              title="Let AI translate it"
+            />
+          </div>
+          {aiNote && (
+            <p className="text-xs text-[var(--text-muted)]">{aiNote}</p>
+          )}
           <Button onClick={save} loading={saving} disabled={!translation.trim()}>
             Add to vocabulary
           </Button>
@@ -118,7 +157,15 @@ export function WordPicker({ resourceId }: { resourceId: string }) {
                   <button
                     key={i}
                     onClick={() =>
-                      setSelected({ word: token.replace(/[.,،؛؟!:"()]/g, ""), sentence: chunk.text })
+                      {
+                        setSelected({
+                          word: token.replace(/[.,،؛؟!:"()]/g, ""),
+                          sentence: chunk.text,
+                        });
+                        setTranslation("");
+                        setRoot(null);
+                        setAiNote(null);
+                      }
                     }
                     className="rounded px-0.5 transition-colors hover:bg-[var(--accent-soft)]
                                hover:text-[var(--accent-text)]"

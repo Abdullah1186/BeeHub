@@ -10,24 +10,25 @@ import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from "react
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      {/* A hexagon — honeycomb, for "hub". */}
+      {/* An eight-point star (khatam) — the commonest motif in Islamic
+          geometric ornament, made of two overlaid squares. */}
+      <g stroke="var(--accent)" strokeWidth="1.4" strokeLinejoin="round">
+        <rect x="6.5" y="6.5" width="19" height="19" rx="1.5"
+              fill="var(--accent)" fillOpacity="0.10" />
+        <rect x="6.5" y="6.5" width="19" height="19" rx="1.5"
+              fill="var(--accent)" fillOpacity="0.10"
+              transform="rotate(45 16 16)" />
+      </g>
+      {/* A nūn: the bowl and its dot. One of the most recognisable shapes in
+          Arabic calligraphy, and it sits naturally inside a star. */}
       <path
-        d="M16 2.5 28 9.25v13.5L16 29.5 4 22.75V9.25z"
-        fill="var(--accent)"
-        fillOpacity="0.16"
-        stroke="var(--accent)"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      {/* An alif inside: the first letter, and a vertical stroke reads as a
-          bookmark at this size. */}
-      <path
-        d="M16 10v9.5c0 1.6 1 2.5 2.6 2.5"
-        stroke="var(--accent-text)"
-        strokeWidth="2.25"
+        d="M11.5 14.2c0 3.5 2.2 5.6 4.5 5.6s4.5-2.1 4.5-5.6"
+        stroke="var(--gold)"
+        strokeWidth="2"
         strokeLinecap="round"
         fill="none"
       />
+      <circle cx="16" cy="10.6" r="1.25" fill="var(--gold)" />
     </svg>
   );
 }
@@ -342,5 +343,106 @@ export function ConfirmButton({
         Cancel
       </Button>
     </div>
+  );
+}
+
+
+// ---------------------------------------------------------------- Health bar
+
+/** A compact strip of the numbers worth glancing at.
+ *
+ *  Three at most. A row of eight statistics is read as decoration; three are
+ *  read. Each one is the answer to a question a learner actually asks — how
+ *  good am I, did I do today's work, am I keeping it up. */
+export function HealthBar({
+  items,
+}: {
+  items: {
+    label: string;
+    value: string;
+    sub?: string;
+    /** 0-1, drawn as a fill behind the tile when present. */
+    progress?: number;
+    tone?: "accent" | "gold" | "neutral";
+  }[];
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="relative overflow-hidden rounded-lg border border-[var(--border)]
+                     bg-[var(--surface)] px-4 py-2.5"
+        >
+          {item.progress !== undefined && (
+            <div
+              className="absolute inset-y-0 left-0 bg-[var(--accent)] opacity-[0.10]
+                         transition-[width] duration-700"
+              style={{ width: `${Math.min(100, item.progress * 100)}%` }}
+              aria-hidden="true"
+            />
+          )}
+          <div className="relative flex items-baseline justify-between gap-2">
+            <span className="text-[11px] uppercase tracking-wide text-[var(--text-subtle)]">
+              {item.label}
+            </span>
+            <span
+              className="text-lg font-semibold"
+              style={{
+                color:
+                  item.tone === "gold"
+                    ? "var(--gold)"
+                    : item.tone === "neutral"
+                      ? "var(--text)"
+                      : "var(--accent-text)",
+              }}
+            >
+              {item.value}
+            </span>
+          </div>
+          {item.sub && (
+            <p className="relative text-[11px] text-[var(--text-muted)]">{item.sub}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The AI affordance. Used wherever the model can fill something in for you. */
+export function SparkleButton({
+  onClick,
+  loading,
+  title = "Fill this in with AI",
+}: {
+  onClick: () => void;
+  loading?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      title={title}
+      aria-label={title}
+      className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center
+                 justify-center rounded-md text-[var(--accent-text)]
+                 transition-colors hover:bg-[var(--accent-soft)]
+                 disabled:opacity-50"
+    >
+      {loading ? (
+        <Spinner size={14} />
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z"
+            fill="currentColor"
+          />
+          <path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z"
+                fill="currentColor" opacity="0.7" />
+        </svg>
+      )}
+    </button>
   );
 }

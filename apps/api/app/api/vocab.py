@@ -78,6 +78,63 @@ class ManualVocab(BaseModel):
     pos: str | None = None
 
 
+class TranslateRequest(BaseModel):
+    word: str = Field(min_length=1, max_length=120)
+    context_sentence: str = Field(default="", max_length=1000)
+
+
+class TranslateResponse(BaseModel):
+    translatable: bool
+    translation: str
+    lemma: str
+    root: str | None = None
+    pos: str
+    note: str | None = None
+
+
+@router.post("/translate", response_model=TranslateResponse)
+def translate_word(
+    body: TranslateRequest, user: AuthenticatedUser = Depends(current_user)
+) -> TranslateResponse:
+    """Translate one selected word, in context.
+
+    Runs on the `mechanical` pool (Haiku): a single word with its sentence is
+    near-deterministic work, and it is latency-sensitive — the learner is
+    waiting with a text box open.
+    """
+    client = user_client(user.token)
+    level = _current_level(client, user.id)
+
+    call = call_skill(
+        "translate-word",
+        json.dumps(
+            {
+                "word": body.word,
+                "context_sentence": body.context_sentence,
+                "learner_level": level,
+            },
+            ensure_ascii=False,
+        ),
+    )
+    record_call(client, call, user.id)
+
+    if call.status != "ok":
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="could not translate that word; type a meaning instead",
+        )
+
+    r = call.parsed
+    return TranslateResponse(
+        translatable=r.translatable,
+        translation=r.translation,
+        lemma=r.lemma,
+        root=r.root,
+        pos=r.pos,
+        note=r.note,
+    )
+
+
 @router.post("/manual", response_model=VocabCard, status_code=status.HTTP_201_CREATED)
 def add_manual(
     body: ManualVocab, user: AuthenticatedUser = Depends(current_user)

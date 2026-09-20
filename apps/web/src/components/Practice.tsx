@@ -103,7 +103,9 @@ export function Practice({
         {!hideBack && (
           <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
         )}
-        <Badge tone="accent">{question.difficulty_cefr}</Badge>
+        {/* Unlabelled, this reads as a mysterious square. It is the level the
+            question was pitched at. */}
+        <Badge tone="accent">Level {question.difficulty_cefr}</Badge>
       </div>
 
       <Card className="p-6">

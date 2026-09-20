@@ -14,30 +14,38 @@
 @theme {
   --font-arabic: "Noto Naskh Arabic", "Geeza Pro", "Al Bayan", serif;
 
-  /* Honey — the identity colour. Warm amber reads as "study" rather than
-     "enterprise dashboard", and stays legible on both grounds. */
-  --color-honey-50:  #fffcf0;
-  --color-honey-100: #fff6d6;
-  --color-honey-200: #ffe9a8;
-  --color-honey-300: #ffd76b;
-  --color-honey-400: #fbc02d;
-  --color-honey-500: #f0a202;
-  --color-honey-600: #d17d00;
-  --color-honey-700: #a85c02;
-  --color-honey-800: #7c4310;
-  --color-honey-900: #5c3212;
+  /* Green — the identity colour.
+     Islamic manuscript green rather than a UI mint: desaturated, slightly
+     blue-shifted, the colour of tilework and binding rather than of a success
+     toast. It has to carry a whole interface without shouting. */
+  --color-jade-50:  #f2f8f4;
+  --color-jade-100: #dceee3;
+  --color-jade-200: #b6dcc6;
+  --color-jade-300: #82c1a0;
+  --color-jade-400: #4ea27a;
+  --color-jade-500: #2f855a;
+  --color-jade-600: #236c48;
+  --color-jade-700: #1b5438;
+  --color-jade-800: #16412c;
+  --color-jade-900: #0f2c1e;
 
-  /* Ink — warm neutrals. Pure grey next to amber looks dead. */
-  --color-ink-50:  #faf9f7;
-  --color-ink-100: #f4f2ee;
-  --color-ink-200: #e8e4dd;
-  --color-ink-300: #d5cfc4;
-  --color-ink-400: #a8a094;
-  --color-ink-500: #7d7568;
-  --color-ink-600: #5c554a;
-  --color-ink-700: #423d35;
-  --color-ink-800: #2a2621;
-  --color-ink-900: #1a1714;
+  /* Gold — the manuscript accent. Illumination, used sparingly: highlights,
+     the logo's flourish, never a background. */
+  --color-gold-300: #e5c87a;
+  --color-gold-500: #c9a227;
+  --color-gold-700: #8a6d14;
+
+  /* Ink — warm parchment neutrals. Pure grey beside green reads cold. */
+  --color-ink-50:  #f9f8f4;
+  --color-ink-100: #f2f0e9;
+  --color-ink-200: #e4e0d5;
+  --color-ink-300: #cfc9b9;
+  --color-ink-400: #a39d8c;
+  --color-ink-500: #77715f;
+  --color-ink-600: #565044;
+  --color-ink-700: #3d3931;
+  --color-ink-800: #26241f;
+  --color-ink-900: #171612;
 
   --radius-card: 0.875rem;
 }
@@ -56,13 +64,14 @@
   --text:        var(--color-ink-900);
   --text-muted:  var(--color-ink-500);
   --text-subtle: var(--color-ink-400);
-  --accent:      var(--color-honey-500);
+  --accent:      var(--color-jade-500);
   --accent-fg:   #ffffff;
-  --accent-soft: var(--color-honey-100);
-  --accent-text: var(--color-honey-700);
+  --accent-soft: var(--color-jade-100);
+  --accent-text: var(--color-jade-700);
+  --gold:        var(--color-gold-500);
 
   --ok-bg: #e7f6ec;  --ok-text: #14683a;
-  --warn-bg: var(--color-honey-100); --warn-text: var(--color-honey-800);
+  --warn-bg: #fdf1d8; --warn-text: var(--color-gold-700);
   --bad-bg: #fdeaea; --bad-text: #9b1c1c;
 
   --shadow-sm: 0 1px 2px rgb(26 23 20 / 0.05);
@@ -82,13 +91,14 @@
     --text:        var(--color-ink-100);
     --text-muted:  var(--color-ink-400);
     --text-subtle: var(--color-ink-500);
-    --accent:      var(--color-honey-400);
+    --accent:      var(--color-jade-400);
     --accent-fg:   var(--color-ink-900);
-    --accent-soft: #3d2f12;
-    --accent-text: var(--color-honey-300);
+    --accent-soft: #14312280;
+    --accent-text: var(--color-jade-300);
+    --gold:        var(--color-gold-300);
 
     --ok-bg: #12301f;  --ok-text: #7ee2a8;
-    --warn-bg: #3d2f12; --warn-text: var(--color-honey-300);
+    --warn-bg: #362b12; --warn-text: var(--color-gold-300);
     --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
@@ -105,12 +115,13 @@
   --text:        var(--color-ink-100);
   --text-muted:  var(--color-ink-400);
   --text-subtle: var(--color-ink-500);
-  --accent:      var(--color-honey-400);
+  --accent:      var(--color-jade-400);
   --accent-fg:   var(--color-ink-900);
-  --accent-soft: #3d2f12;
-  --accent-text: var(--color-honey-300);
+  --accent-soft: #14312280;
+  --accent-text: var(--color-jade-300);
+  --gold:        var(--color-gold-300);
   --ok-bg: #12301f;  --ok-text: #7ee2a8;
-  --warn-bg: #3d2f12; --warn-text: var(--color-honey-300);
+  --warn-bg: #362b12; --warn-text: var(--color-gold-300);
   --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -175,4 +186,36 @@ img { max-width: 100%; }
 *:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+
+/* A faint geometric ground, in the manner of Islamic tilework.
+   Two overlaid gradients make an eight-point interference pattern — enough to
+   read as a woven surface at a glance, faint enough never to compete with
+   Arabic text, which needs a calm ground more than Latin does. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    repeating-linear-gradient(45deg,
+      color-mix(in srgb, var(--accent) 5%, transparent) 0 1px,
+      transparent 1px 22px),
+    repeating-linear-gradient(-45deg,
+      color-mix(in srgb, var(--accent) 5%, transparent) 0 1px,
+      transparent 1px 22px);
+}
+
+/* Section headings get a small gold rule, echoing manuscript rubrication. */
+.rule-gold::after {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-top: 0.4rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
 }

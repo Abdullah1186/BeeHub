@@ -45,4 +45,6 @@ tasks:
   grade-short-answer:               {pool: judgment,   max_tokens: 16000}
   tag-grammar-errors:               {pool: judgment,   max_tokens: 12000}
   estimate-cefr-level:              {pool: judgment,   max_tokens: 8000, batch: true}
-  extract-vocab-from-chunk:         {pool: mechanical, max_tokens: 2000, batch: true}
+  extract-vocab-from-chunk:         {pool: mechanical, max_tokens: 4000, batch: true}
+  # One word plus its sentence. Latency-sensitive: the learner is waiting.
+  translate-word:                   {pool: mechanical, max_tokens: 1000}

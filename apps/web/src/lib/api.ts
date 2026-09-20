@@ -267,14 +267,41 @@ export const api = {
 
   getResource: (id: string) => request<Resource>(`/resources/${id}`),
 
-  uploadPdf: (file: File, title: string, positionValue: number, author?: string) => {
+  uploadPdf: (
+    file: File,
+    title: string,
+    positionValue: number,
+    // Passed through to fetch, so an upload in flight can be cancelled.
+    signal?: AbortSignal,
+    author?: string,
+  ) => {
     const form = new FormData();
     form.append("file", file);
     form.append("title", title);
     form.append("position_value", String(positionValue));
     if (author) form.append("author", author);
-    return request<Resource>("/resources/upload", { method: "POST", body: form });
+    return request<Resource>("/resources/upload", {
+      method: "POST",
+      body: form,
+      signal,
+    });
   },
+
+  updateResource: (id: string, patch: { title?: string; author?: string }) =>
+    request<Resource>(`/resources/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+
+  translateWord: (word: string, contextSentence: string) =>
+    request<{
+      translatable: boolean;
+      translation: string;
+      lemma: string;
+      root: string | null;
+      pos: string;
+      note: string | null;
+    }>("/vocab/translate", {
+      method: "POST",
+      body: JSON.stringify({ word, context_sentence: contextSentence }),
+    }),
 
   deleteResource: (id: string) =>
     request<void>(`/resources/${id}`, { method: "DELETE" }),

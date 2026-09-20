@@ -58,31 +58,58 @@ export function VocabTable() {
         </span>
       </div>
 
-      <Card className="divide-y divide-[var(--border-soft)]">
-        {filtered.map((c) => (
-          <div key={c.id} className="flex items-start justify-between gap-4 p-4">
-            <div className="min-w-0">
-              <p className="arabic bidi-isolate text-2xl" dir="rtl" lang="ar">{c.arabic}</p>
-              {c.context_sentence && (
-                <p className="arabic bidi-isolate mt-1 truncate text-sm text-[var(--text-subtle)]"
-                   dir="rtl" lang="ar">
-                  {c.context_sentence}
+      {/* A real grid, not a flex row per card.
+          Flex sizes each row to its own content, so a long Arabic word pushes
+          its meaning left and nothing lines up down the page. Fixed columns
+          put every word, meaning and root in the same place. */}
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-4
+                        border-b border-[var(--border)] bg-[var(--surface-alt)]
+                        px-4 py-2 text-[11px] uppercase tracking-wide
+                        text-[var(--text-subtle)]">
+          <span className="text-right">Word</span>
+          <span>Meaning</span>
+          <span className="text-right">Root</span>
+        </div>
+
+        <div className="divide-y divide-[var(--border-soft)]">
+          {filtered.map((c) => (
+            <div
+              key={c.id}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center
+                         gap-4 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="arabic bidi-isolate truncate text-2xl" dir="rtl" lang="ar">
+                  {c.arabic}
                 </p>
-              )}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <p className="text-sm">{c.translation}</p>
-              <div className="flex gap-1">
-                {c.pos && <Badge>{c.pos}</Badge>}
-                {c.root && (
+                {c.context_sentence && (
+                  <p className="arabic bidi-isolate truncate text-xs text-[var(--text-subtle)]"
+                     dir="rtl" lang="ar">
+                    {c.context_sentence}
+                  </p>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm">{c.translation}</p>
+                {c.pos && (
+                  <p className="text-xs text-[var(--text-subtle)]">{c.pos}</p>
+                )}
+              </div>
+
+              <div className="justify-self-end">
+                {c.root ? (
                   <Badge tone="accent">
                     <span className="arabic bidi-isolate" dir="rtl" lang="ar">{c.root}</span>
                   </Badge>
+                ) : (
+                  <span className="text-xs text-[var(--text-subtle)]">—</span>
                 )}
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </Card>
     </div>
   );
