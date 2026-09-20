@@ -61,6 +61,21 @@ class VocabStats(BaseModel):
     by_resource: list[dict]
 
 
+class ScorePoint(BaseModel):
+    """One graded attempt, for the score-over-time chart."""
+
+    date: str
+    content: float
+    language: float
+    difficulty: str
+
+
+class CategoryCount(BaseModel):
+    label: str
+    count: int
+    share: float
+
+
 class Overview(BaseModel):
     attempts_total: int
     attempts_7d: int
@@ -73,6 +88,12 @@ class Overview(BaseModel):
     vocab_total: int
     vocab: VocabStats
     cost_usd_total: float
+    # Series for the charts. Kept as plain lists so the frontend does no
+    # aggregation — the same numbers should not be computed in two places.
+    score_history: list[ScorePoint]
+    error_categories: list[CategoryCount]
+    spend_by_day: list[dict]
+    spend_by_model: list[dict]
 
 
 def _estimate(scores: list[tuple[str, float]]) -> SkillEstimate | None:
@@ -254,7 +275,53 @@ def overview(user: AuthenticatedUser = Depends(current_user)) -> Overview:
         ],
     )
 
-    calls = client.table("model_calls").select("cost_usd").limit(1000).execute()
+    # --- series for charts ---
+
+    # Oldest first, so a line chart reads left to right.
+    score_history = [
+        ScorePoint(
+            date=a["created_at"][:10],
+            content=round(float(a["content_score"]), 3),
+            language=round(float(a["language_score"] or 0), 3),
+            difficulty=a["difficulty_cefr"],
+        )
+        for a in reversed(graded)
+    ][-60:]
+
+    category_counts = Counter(t["category"] for t in tags)
+    tag_total = sum(category_counts.values()) or 1
+    error_categories = [
+        CategoryCount(label=name, count=n, share=round(n / tag_total, 3))
+        for name, n in category_counts.most_common()
+    ]
+
+    calls = (
+        client.table("model_calls")
+        .select("cost_usd, model, created_at")
+        .order("created_at", desc=True)
+        .limit(1000)
+        .execute()
+    )
+    call_rows = calls.data or []
+
+    by_day_cost: dict[str, float] = {}
+    by_model_cost: dict[str, float] = {}
+    for c in call_rows:
+        day = (c.get("created_at") or "")[:10]
+        cost = float(c["cost_usd"])
+        if day:
+            by_day_cost[day] = by_day_cost.get(day, 0.0) + cost
+        model = c.get("model") or "unknown"
+        by_model_cost[model] = by_model_cost.get(model, 0.0) + cost
+
+    spend_by_day = [
+        {"date": d, "cost": round(by_day_cost.get(d, 0.0), 4)}
+        for d in sorted(by_day_cost)[-14:]
+    ]
+    spend_by_model = [
+        {"model": m, "cost": round(c, 4)}
+        for m, c in sorted(by_model_cost.items(), key=lambda kv: -kv[1])
+    ]
 
     return Overview(
         attempts_total=len(attempts),
@@ -275,5 +342,9 @@ def overview(user: AuthenticatedUser = Depends(current_user)) -> Overview:
         activity=activity,
         vocab_total=len(vocab_rows),
         vocab=vocab_stats,
-        cost_usd_total=round(sum(float(c["cost_usd"]) for c in (calls.data or [])), 4),
+        cost_usd_total=round(sum(float(c["cost_usd"]) for c in call_rows), 4),
+        score_history=score_history,
+        error_categories=error_categories,
+        spend_by_day=spend_by_day,
+        spend_by_model=spend_by_model,
     )

@@ -1,19 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type Overview } from "../lib/api";
-import { Badge, Card, EmptyState, Skeleton } from "../ui";
+import { Badge, Button, Card, EmptyState, Skeleton } from "../ui";
+import { BarList, ColumnChart, LineChart, Meter } from "../ui/charts";
 import { humanise } from "./Home";
 
-/** Spec §2.5 — CEFR per skill with honest confidence, error breakdown,
- *  activity, and cost. Everything here is computed from recorded rows; no
- *  model call happens to render this page. */
-/** Which panels exist, and which are on by default.
+/**
+ * Spec §2.5 — the metrics dashboard.
  *
- *  A dashboard that shows everything shows nothing: the numbers a learner
- *  cares about change week to week, so the panels are theirs to choose.
- *  Speaking and writing are listed even though they have no data yet, so the
- *  shape of what is coming is visible rather than hidden. */
+ * One panel with the whole picture, and chips to choose what is in it. A
+ * dashboard that shows everything shows nothing: which numbers matter changes
+ * week to week, so the selection belongs to the learner.
+ *
+ * Every panel is a chart or a table, not a lone number. A number answers "how
+ * many"; a learner is usually asking "is this going anywhere", which only a
+ * shape answers.
+ */
+
 const PANELS = [
-  { id: "levels", label: "Levels", on: true },
+  { id: "progress", label: "Progress", on: true },
   { id: "activity", label: "Activity", on: true },
   { id: "vocab", label: "Vocabulary", on: true },
   { id: "errors", label: "Errors", on: true },
@@ -21,23 +25,25 @@ const PANELS = [
 ] as const;
 
 type PanelId = (typeof PANELS)[number]["id"];
-
 const STORAGE_KEY = "beehub.metrics.panels";
 
 export function Metrics() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [asTable, setAsTable] = useState(false);
   const [enabled, setEnabled] = useState<Set<PanelId>>(() => {
-    // Per-browser preference, so it survives a reload. Wrapped because
-    // storage throws in private windows and with site data blocked.
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return new Set(JSON.parse(saved) as PanelId[]);
     } catch {
-      /* fall through to defaults */
+      /* private windows and blocked site data both throw */
     }
     return new Set(PANELS.filter((p) => p.on).map((p) => p.id));
   });
+
+  useEffect(() => {
+    api.overview().then(setData).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
   function toggle(id: PanelId) {
     const next = new Set(enabled);
@@ -46,28 +52,17 @@ export function Metrics() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
     } catch {
-      /* preference is a convenience, not state the app depends on */
+      /* a preference, not state the app depends on */
     }
   }
 
   const show = useMemo(() => (id: PanelId) => enabled.has(id), [enabled]);
 
-  useEffect(() => {
-    api
-      .overview()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
   if (loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-9 w-32" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-32 rounded-[var(--radius-card)]" />
-          <Skeleton className="h-32 rounded-[var(--radius-card)]" />
-        </div>
+        <Skeleton className="h-96 rounded-[var(--radius-card)]" />
       </div>
     );
   }
@@ -81,19 +76,25 @@ export function Metrics() {
     );
   }
 
-  const peak = Math.max(...data.activity.map((a) => a.count), 1);
+  const reading = data.estimates.find((e) => e.skill === "reading");
+  const writing = data.estimates.find((e) => e.skill === "writing");
 
   return (
-    <div className="space-y-8 fade-up">
-      <div>
-        <h1 className="rule-gold text-2xl font-semibold tracking-tight">Metrics</h1>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">
-          {data.attempts_total} answers graded so far.
-        </p>
+    <div className="space-y-5 fade-up">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="rule-gold text-2xl font-semibold tracking-tight">Metrics</h1>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            {data.attempts_total} answers graded · {data.vocab.total} words collected
+          </p>
+        </div>
+        {/* The table view is the relief the light palette's contrast warning
+            requires, and it is how you read exact values. */}
+        <Button variant="secondary" size="sm" onClick={() => setAsTable(!asTable)}>
+          {asTable ? "Show charts" : "Show table"}
+        </Button>
       </div>
 
-      {/* Panel switches. Chips rather than a settings menu: choosing what to
-          see is part of reading the dashboard, not a separate task. */}
       <div className="flex flex-wrap gap-2">
         {PANELS.map((p) => {
           const on = show(p.id);
@@ -108,184 +109,315 @@ export function Metrics() {
                   : "border-[var(--border)] text-[var(--text-subtle)] hover:text-[var(--text)]"
               }`}
             >
-              {on ? "✓ " : ""}
-              {p.label}
+              {on ? "✓ " : ""}{p.label}
             </button>
           );
         })}
       </div>
 
-      {/* Per-skill CEFR. Reading and writing are measured separately because
-          they genuinely diverge — a learner can understand far more than they
-          can produce (§2.5). */}
-      {show("levels") && (
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Level by skill</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {data.estimates.map((e) => (
-            <Card key={e.skill} className="p-5">
-              <div className="flex items-start justify-between">
-                <p className="text-sm font-medium capitalize">{e.skill}</p>
-                {e.sufficient ? (
-                  <Badge tone="accent">{Math.round(e.confidence * 100)}% confident</Badge>
-                ) : (
-                  <Badge>building</Badge>
-                )}
-              </div>
-
-              {e.sufficient ? (
-                <p className="mt-2 text-4xl font-semibold text-[var(--accent-text)]">
-                  {e.cefr_level}
-                </p>
-              ) : (
-                <>
-                  <p className="mt-2 text-lg text-[var(--text-muted)]">Not enough data</p>
-                  <p className="mt-1 text-xs text-[var(--text-subtle)]">
-                    {e.n_observations} of 15 graded answers
-                  </p>
-                </>
-              )}
-
-              <p className="mt-3 text-xs text-[var(--text-subtle)]">
-                {e.skill === "reading"
-                  ? "From how well you answer, judged against the source."
-                  : "From the grammatical accuracy of your Arabic."}
-              </p>
-            </Card>
-          ))}
-        </div>
-      </section>
-      )}
-
-      {show("activity") && (
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Activity</h2>
-        <Card className="p-5">
-          <div className="flex h-24 items-end gap-1">
-            {data.activity.map((d) => (
-              <div key={d.date} className="group relative flex-1" title={`${d.date}: ${d.count}`}>
-                <div
-                  className="w-full rounded-sm bg-[var(--accent)] transition-all"
-                  style={{
-                    height: `${Math.max(3, (d.count / peak) * 96)}px`,
-                    opacity: d.count === 0 ? 0.15 : 0.45 + (d.count / peak) * 0.55,
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex justify-between text-xs text-[var(--text-subtle)]">
-            <span>14 days ago</span>
-            <span>today</span>
-          </div>
-        </Card>
-      </section>
-      )}
-
-      {show("errors") && data.weak_spots.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">
-            Where the errors are
-          </h2>
-          <Card className="divide-y divide-[var(--border-soft)]">
-            {data.weak_spots.map((w) => (
-              <div key={`${w.category}/${w.subcategory}`} className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{humanise(w.subcategory)}</p>
-                    <p className="text-xs text-[var(--text-subtle)]">{humanise(w.category)}</p>
-                  </div>
-                  <span className="text-lg font-semibold text-[var(--text-muted)]">{w.count}</span>
-                </div>
-                <div className="mt-2 flex gap-1.5">
-                  {Object.entries(w.severity_mix).map(([sev, n]) => (
-                    <Badge
-                      key={sev}
-                      tone={sev === "blocking" ? "bad" : sev === "moderate" ? "warn" : "neutral"}
-                    >
-                      {n} {sev}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </Card>
-        </section>
-      )}
-
-      {/* Spec §2.5: total known, retention rate, words due for review. */}
-      {data.vocab.total > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">Vocabulary</h2>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Small label="Collected" value={String(data.vocab.total)} />
-            <Small label="Known" value={String(data.vocab.known)} />
-            <Small label="In the deck" value={String(data.vocab.due_now)} />
-            <Small
-              label="Retention"
-              value={
-                data.vocab.retention_rate != null
-                  ? `${Math.round(data.vocab.retention_rate * 100)}%`
-                  : "—"
-              }
-            />
-          </div>
-
-          {data.vocab.total_reviews > 0 && (
-            <p className="text-xs text-[var(--text-subtle)]">
-              Retention is successful reviews as a share of all{" "}
-              {data.vocab.total_reviews} — whether the words are sticking, not how
-              many were collected.
+      {asTable ? (
+        <TableView data={data} />
+      ) : (
+        <Card className="divide-y divide-[var(--border-soft)]">
+          {enabled.size === 0 && (
+            <p className="py-12 text-center text-sm text-[var(--text-subtle)]">
+              Everything is switched off. Turn a panel on above.
             </p>
           )}
 
-          {data.vocab.by_resource.length > 0 && (
-            <Card className="divide-y divide-[var(--border-soft)]">
-              {data.vocab.by_resource.map((r) => (
-                <div key={r.title} className="flex items-center justify-between p-4">
-                  <p className="arabic bidi-isolate truncate text-base" dir="rtl" lang="ar">
-                    {r.title}
-                  </p>
-                  <Badge>{r.count} words</Badge>
+          {show("progress") && (
+            <Panel title="Progress" caption="Understanding and accuracy, per answer.">
+              <div className="grid gap-6 sm:grid-cols-[1fr_200px]">
+                <LineChart
+                  series={[
+                    {
+                      name: "Understanding",
+                      points: data.score_history.map((p, i) => ({
+                        x: `#${i + 1} · ${p.date}`,
+                        y: p.content,
+                      })),
+                    },
+                    {
+                      name: "Accuracy",
+                      points: data.score_history.map((p, i) => ({
+                        x: `#${i + 1} · ${p.date}`,
+                        y: p.language,
+                      })),
+                    },
+                  ]}
+                />
+                <div className="space-y-4">
+                  {[reading, writing].map(
+                    (e) =>
+                      e && (
+                        <div key={e.skill}>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-sm capitalize">{e.skill}</span>
+                            {e.sufficient ? (
+                              <span className="text-2xl font-semibold text-[var(--accent-text)]">
+                                {e.cefr_level}
+                              </span>
+                            ) : (
+                              <Badge>building</Badge>
+                            )}
+                          </div>
+                          <div className="mt-1.5 h-2 overflow-hidden rounded-full
+                                          bg-[var(--surface-alt)]">
+                            <div
+                              className="h-full rounded-full transition-[width] duration-700"
+                              style={{
+                                width: `${Math.min(1, e.n_observations / 15) * 100}%`,
+                                background: "var(--series-1)",
+                              }}
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                            {e.sufficient
+                              ? `${Math.round(e.confidence * 100)}% confident`
+                              : `${e.n_observations} of 15 answers needed`}
+                          </p>
+                        </div>
+                      ),
+                  )}
                 </div>
-              ))}
-            </Card>
+              </div>
+            </Panel>
           )}
-        </section>
-      )}
 
-      {show("spend") && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">Totals</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Small
-              label="Mean understanding"
-              value={
-                data.mean_content_score != null
-                  ? `${Math.round(data.mean_content_score * 100)}%`
-                  : "—"
-              }
-            />
-            {/* §7: you cannot optimise spend you cannot see. */}
-            <Small label="AI spend" value={`$${data.cost_usd_total.toFixed(2)}`} />
-          </div>
-        </section>
-      )}
+          {show("activity") && (
+            <Panel title="Activity" caption="Answers per day, last 14 days.">
+              <ColumnChart
+                data={data.activity.map((a) => ({
+                  label: a.date,
+                  value: a.count,
+                  caption: a.date === data.activity[0].date ? "14 days ago" : "today",
+                }))}
+              />
+              <div className="mt-4 flex gap-6 text-sm">
+                <Stat label="This week" value={String(data.attempts_7d)} />
+                <Stat label="Streak" value={`${data.streak_days}d`} />
+                <Stat
+                  label="Mean understanding"
+                  value={
+                    data.mean_content_score != null
+                      ? `${Math.round(data.mean_content_score * 100)}%`
+                      : "—"
+                  }
+                />
+              </div>
+            </Panel>
+          )}
 
-      {enabled.size === 0 && (
-        <p className="py-8 text-center text-sm text-[var(--text-subtle)]">
-          Everything is switched off. Turn a panel on above.
-        </p>
+          {show("vocab") && data.vocab.total > 0 && (
+            <Panel title="Vocabulary" caption="What you have collected, and whether it is sticking.">
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <Meter
+                    value={data.vocab.known}
+                    max={data.vocab.total}
+                    label="Known"
+                    caption={`${data.vocab.due_now} still in the deck`}
+                  />
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm">Retention</span>
+                      <span className="text-sm tabular-nums text-[var(--text-muted)]">
+                        {data.vocab.retention_rate != null
+                          ? `${Math.round(data.vocab.retention_rate * 100)}%`
+                          : "—"}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2.5 overflow-hidden rounded-full
+                                    bg-[var(--surface-alt)]">
+                      <div
+                        className="h-full rounded-full transition-[width] duration-700"
+                        style={{
+                          width: `${(data.vocab.retention_rate ?? 0) * 100}%`,
+                          background: "var(--series-1)",
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                      {data.vocab.total_reviews
+                        ? `recalled on ${data.vocab.total_reviews} reviews`
+                        : "no reviews yet"}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-subtle)]">
+                    By book
+                  </p>
+                  <BarList
+                    items={data.vocab.by_resource.map((r) => ({
+                      label: r.title,
+                      value: r.count,
+                    }))}
+                    format={(v) => `${v} words`}
+                  />
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {show("errors") && (
+            <Panel title="Errors" caption="Which parts of the grammar are costing you.">
+              {data.error_categories.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <BarList
+                    items={data.error_categories.map((c) => ({
+                      label: humanise(c.label),
+                      value: c.count,
+                      hint: `${Math.round(c.share * 100)}% of all errors`,
+                    }))}
+                  />
+                  <div>
+                    <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-subtle)]">
+                      Most frequent
+                    </p>
+                    <div className="space-y-2">
+                      {data.weak_spots.map((w) => (
+                        <div key={`${w.category}/${w.subcategory}`}
+                             className="flex items-center justify-between gap-3 text-sm">
+                          <span className="truncate">{humanise(w.subcategory)}</span>
+                          <Badge tone={w.severity_mix.blocking ? "bad" : "warn"}>
+                            {w.count}×
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)]">
+                  No grammar errors tagged yet — nothing to report, which is the good case.
+                </p>
+              )}
+            </Panel>
+          )}
+
+          {show("spend") && (
+            <Panel title="AI spend" caption="§7: you cannot optimise spend you cannot see.">
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-subtle)]">
+                    Per day
+                  </p>
+                  <ColumnChart
+                    data={data.spend_by_day.map((d) => ({
+                      label: `${d.date}: $${d.cost.toFixed(3)}`,
+                      value: d.cost,
+                    }))}
+                    height={90}
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-subtle)]">
+                    By model
+                  </p>
+                  <BarList
+                    items={data.spend_by_model.map((m) => ({
+                      label: m.model,
+                      value: m.cost,
+                    }))}
+                    format={(v) => `$${v.toFixed(4)}`}
+                  />
+                  <p className="mt-3 text-sm">
+                    Total{" "}
+                    <span className="font-semibold">${data.cost_usd_total.toFixed(4)}</span>
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          )}
+        </Card>
       )}
     </div>
   );
 }
 
-function Small({ label, value }: { label: string; value: string }) {
+function Panel({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Card className="p-4">
-      <p className="text-xs uppercase tracking-wide text-[var(--text-subtle)]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+    <section className="p-5">
+      <div className="mb-4">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {caption && <p className="text-xs text-[var(--text-subtle)]">{caption}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-[var(--text-subtle)]">{label}</p>
+      <p className="text-lg font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+/** The same numbers, exactly. Charts show shape; this shows values. */
+function TableView({ data }: { data: Overview }) {
+  const rows: [string, string][] = [
+    ["Answers graded", String(data.attempts_total)],
+    ["Answers this week", String(data.attempts_7d)],
+    ["Streak", `${data.streak_days} days`],
+    [
+      "Mean understanding",
+      data.mean_content_score != null ? `${Math.round(data.mean_content_score * 100)}%` : "—",
+    ],
+    [
+      "Mean accuracy",
+      data.mean_language_score != null ? `${Math.round(data.mean_language_score * 100)}%` : "—",
+    ],
+    ...data.estimates.map(
+      (e) =>
+        [
+          `${humanise(e.skill)} level`,
+          e.sufficient
+            ? `${e.cefr_level} (${Math.round(e.confidence * 100)}% confident)`
+            : `building — ${e.n_observations}/15 answers`,
+        ] as [string, string],
+    ),
+    ["Words collected", String(data.vocab.total)],
+    ["Words known", String(data.vocab.known)],
+    ["Words in the deck", String(data.vocab.due_now)],
+    [
+      "Retention",
+      data.vocab.retention_rate != null
+        ? `${Math.round(data.vocab.retention_rate * 100)}% over ${data.vocab.total_reviews} reviews`
+        : "no reviews yet",
+    ],
+    ...data.error_categories.map(
+      (c) => [`Errors · ${humanise(c.label)}`, String(c.count)] as [string, string],
+    ),
+    ...data.spend_by_model.map(
+      (m) => [`Spend · ${m.model}`, `$${m.cost.toFixed(4)}`] as [string, string],
+    ),
+    ["Spend · total", `$${data.cost_usd_total.toFixed(4)}`],
+  ];
+
+  return (
+    <Card className="overflow-hidden">
+      <table className="w-full text-sm">
+        <tbody className="divide-y divide-[var(--border-soft)]">
+          {rows.map(([label, value]) => (
+            <tr key={label}>
+              <td className="px-4 py-2.5 text-[var(--text-muted)]">{label}</td>
+              <td className="px-4 py-2.5 text-right font-medium tabular-nums">{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </Card>
   );
 }

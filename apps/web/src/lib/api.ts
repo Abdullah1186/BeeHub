@@ -131,6 +131,10 @@ export interface Overview {
   vocab_total: number;
   vocab: VocabStats;
   cost_usd_total: number;
+  score_history: { date: string; content: number; language: number; difficulty: string }[];
+  error_categories: { label: string; count: number; share: number }[];
+  spend_by_day: { date: string; cost: number }[];
+  spend_by_model: { model: string; cost: number }[];
 }
 
 export interface VocabCard {

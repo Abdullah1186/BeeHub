@@ -70,6 +70,14 @@
   --accent-text: var(--color-jade-700);
   --gold:        var(--color-gold-500);
 
+  /* Chart series. Validated with the dataviz palette checker:
+     worst adjacent CVD ΔE 23.1, normal-vision ΔE 24.0, both above target.
+     Light mode warns on contrast vs surface, which is why every chart
+     carries direct labels and the dashboard offers a table view. */
+  --series-1: #1baf7a;
+  --series-2: #2a78d6;
+  --series-3: #eda100;
+
   --ok-bg: #e7f6ec;  --ok-text: #14683a;
   --warn-bg: #fdf1d8; --warn-text: var(--color-gold-700);
   --bad-bg: #fdeaea; --bad-text: #9b1c1c;
@@ -97,6 +105,12 @@
     --accent-text: var(--color-jade-300);
     --gold:        var(--color-gold-300);
 
+    /* Same hues, re-stepped for the dark surface — not an automatic flip.
+       Validated: worst adjacent CVD ΔE 19.6, contrast all ≥3:1. */
+    --series-1: #199e70;
+    --series-2: #3987e5;
+    --series-3: #c98500;
+
     --ok-bg: #12301f;  --ok-text: #7ee2a8;
     --warn-bg: #362b12; --warn-text: var(--color-gold-300);
     --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
@@ -120,6 +134,9 @@
   --accent-soft: #14312280;
   --accent-text: var(--color-jade-300);
   --gold:        var(--color-gold-300);
+  --series-1: #199e70;
+  --series-2: #3987e5;
+  --series-3: #c98500;
   --ok-bg: #12301f;  --ok-text: #7ee2a8;
   --warn-bg: #362b12; --warn-text: var(--color-gold-300);
   --bad-bg: #3b1a1a; --bad-text: #f5a3a3;
