@@ -1046,6 +1046,8 @@ the API only queues the job. `make worker-once` catches up on a backlog.
 ```bash
 make test        # 155 tests, free
 make db-test     # position gate against real Postgres (needs Docker)
+                 # 0004_storage.sql self-skips here: it guards on whether the
+                 # storage schema exists, so plain Postgres is a no-op
 make eval        # replay evals from cassettes, free
 make check       # all three
 
