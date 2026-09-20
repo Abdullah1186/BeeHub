@@ -86,6 +86,11 @@ Two properties this shape is built to guarantee:
 
 ```
 BeeHub/
+├── apps/web/               React + TS + Vite frontend (Vercel)
+│   ├── src/lib/            supabase client, typed API client
+│   ├── src/components/     Auth, Resources, Practice
+│   └── public/fonts/       Noto Naskh Arabic, self-hosted
+│
 ├── apps/api/               FastAPI backend — a self-contained deployable
 │   ├── app/                Python package
 │   │   ├── ingest/         PDF → text → quality gate → chunks
@@ -304,6 +309,39 @@ Of the 6 failures, 3 are defensible alternative categorisations rather than
 misses — `فاطمة ذهب` tagged `agreement/gender` instead of
 `morphology/verb_conjugation` is an honest reading of the same error. Only 3 are
 true misses (conditional mood, one register slip, one hamza seat).
+
+### 4.7 The frontend and RTL
+
+Spec §7 makes RTL a non-negotiable, and the easy mistake is to set
+`dir="rtl"` on `<html>`. That flips the entire interface and makes mixed
+Arabic/English strings *worse*: the bidi algorithm needs direction declared at
+the boundary of each run, not globally.
+
+So direction is per-element:
+
+```html
+<html lang="en" dir="ltr">          <!-- chrome is English -->
+  …
+  <p class="arabic" dir="rtl" lang="ar">عن ماذا تحدث الولد؟</p>
+```
+
+Three details that matter in practice:
+
+- **`unicode-bidi: isolate`** on titles and error spans. Without it, an Arabic
+  phrase adjacent to LTR text has its punctuation and digits reordered.
+- **`line-height: 2.1`** for Arabic. Harakat sit above *and* below the baseline
+  and clip at typical Latin leading.
+- **Self-hosted font.** Noto Naskh Arabic (52 KB woff2, Arabic subset) rather
+  than the Google CDN — the Arabic fallback stack is poor enough that a CDN
+  round trip produces severe layout shift on exactly the text that matters.
+
+The practice screen shows **understanding and accuracy as separate scores**, so a
+correct answer in imperfect Arabic visibly scores well on one and less on the
+other. That is the §2.5 distinction made visible rather than averaged away.
+
+A `409` from `/learning/next` renders as information, not an error — it means the
+position gate has nothing to offer, or no groundable question could be made.
+
 
 ---
 
@@ -552,6 +590,7 @@ make check       # all of the above
 
 make eval-live   # real API, re-records cassettes (~$0.60)
 make api         # uvicorn on :8000
+make web         # vite on :5173
 ```
 
 CI runs `test`, `db-test` and `eval` on every push — **with no API key in the
@@ -635,6 +674,7 @@ If the model's own holistic score disagreed with the computed one by more than
 | Grading | verdicts + error tags in one call, score computed in Python |
 | Telemetry | every call logged with tokens, latency, cost |
 | Evals | 62 cases, cassette replay, per-case regression detection |
+| Frontend | auth, upload, position tracking, the practice loop, RTL |
 
 ### Measured
 
@@ -648,10 +688,7 @@ If the model's own holistic score disagreed with the computed one by more than
 
 ### Not built yet
 
-The **frontend**. There is no way to use any of this without curl — the single
-biggest gap between "working system" and "app you can learn Arabic with".
-
-Then, from the spec's phases: vocab flashcards, the review queue with spaced
+From the spec's phases: vocab flashcards, the review queue with spaced
 repetition, the metrics tab, the home dashboard (Phase 2), speaking and photo
 upload (Phase 3).
 
